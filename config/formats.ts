@@ -3101,43 +3101,76 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 	},
 	{
 		name: "[Gen 9] Super Staff Bros Ultimate",
-		desc: "The fifth iteration of Super Staff Bros is here! Battle with a random team of pokemon created by the sim staff.",
+		desc: "The fourth iteration of Super Staff Brothers! Battle with a random team of gooners.",
 		mod: 'gen9ssb',
 		debug: true,
 		team: 'randomStaffBros',
 		bestOfDefault: true,
-		ruleset: ['HP Percentage Mod', 'Cancel Mod', 'Sleep Clause Mod'],
+		ruleset: ['HP Percentage Mod', 'Cancel Mod', 'Sleep Clause Mod', 'Team Preview', 'Terastal Clause'],
 		onBegin() {
 			// TODO look into making an event to put this right after turn|1
 			// https://discordapp.com/channels/630837856075513856/630845310033330206/716126469528485909
 			// Requires client change
-			this.add(`raw|<div class='broadcast-green'><b>Wondering what all these custom moves, abilities, and items do?<br />Check out the <a href="https://www.smogon.com/articles/super-staff-bros-ultimate" target="_blank">Super Staff Bros: Ultimate Guide</a> or use /ssb to find out!</b></div>`);
-			if (this.ruleTable.has('dynamaxclause')) {
-				// Old joke format we're bringing back
-				this.add('message', 'Fox only');
-				this.add('message', 'No items');
-				this.add('message', 'Final Destination');
-				return;
-			} else if (this.ruleTable.has('zmoveclause')) {
-				// Old joke format we're bringing back
-				this.add('message', 'April Fool\'s Day');
-				return;
+			for (const pokemon of this.getAllPokemon()) {
+				if (pokemon.species.id === 'ironthorns' && pokemon.getAbility().id === 'autorepair') {
+					const dmg = pokemon.maxhp - 1;
+					this.debug('shifu robot starts at 1 hp due to autorepair')
+					pokemon.hp -= dmg;
+				}
 			}
-
-			this.add('message', 'EVERYONE IS HERE!');
-			this.add('message', 'FIGHT!');
+			this.add(`raw|<div class='broadcast-blue'><b>The fourth iteration of Super Staff Brothers! Battle with a random team of gooners.<br /><a href="https://docs.google.com/spreadsheets/d/1HGB2YDZ-Pe2MtWa-IX8d24r4j2rxAkvIgP9NeeyNG0Y/edit?gid=200255702#gid=200255702" target="_blank">SEE THE ROSTER</a></b></div>`);
+			this.add(`raw|<div class='broadcast-red'><b>Ready?<br />BEGIN!</b></div>`);
+		},
+		onResidual() {
+			for (const pokemon of this.getAllPokemon()) {
+				// Safeguard against moves that hit inactive Pokemon, sometimes causing Pokemon to be at or below 0 HP but not fainted.
+				if (pokemon.hp <= 0 && !pokemon.fainted) pokemon.hp = 0;
+				if (pokemon.getAbility().id === 'autorepair') {
+					if (pokemon.abilityState.permdis || pokemon.fainted || pokemon.isActive) continue;
+					if (pokemon.hp >= pokemon.maxhp) {
+						pokemon.hp = pokemon.maxhp;
+						continue;
+					}
+					const health = pokemon.maxhp * 0.15;
+					pokemon.hp += health;
+					this.add('-heal', pokemon, pokemon.getHealth);
+				}
+				if (pokemon.getItem().id === 'zhuyou') {
+					if (pokemon.isActive || !pokemon.status) continue;
+					this.add('-curestatus', pokemon, pokemon.status, '[from] item: Zhuyou');
+					pokemon.clearStatus();
+				}
+			}
+			for (const pokemon of this.getAllActive()) {
+				if (pokemon.species.id === 'mimikyubusted') {
+					if (!pokemon.abilityState.dollDur || pokemon.abilityState.dollDur <= 0) {
+						pokemon.formeChange('Mimikyu');
+						pokemon.abilityState.dollDur = 0;
+					} else if (pokemon.abilityState.dollDur) {
+						pokemon.abilityState.dollDur--;
+					}
+				}
+			}
 		},
 		onSwitchInPriority: 100,
 		onSwitchIn(pokemon) {
+			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
+			const ability = target.getAbility();
+			if (pokemon.abilityState.ran) pokemon.addVolatile('shikigamiran');
+			if (ability && pokemon.item.id === 'sketchbook') {
+				const effect = 'ability:' + ability.id;
+				pokemon.addVolatile(effect);
+				this.add('-message', `${pokemon.name} sketched ${target.name}'s ${ability.name}!`);
+			}
 			let name: string = this.toID(pokemon.illusion ? pokemon.illusion.name : pokemon.name);
 			if (this.dex.species.get(name).exists || this.dex.moves.get(name).exists ||
 				this.dex.abilities.get(name).exists || name === 'blitz') {
 				// Certain pokemon have volatiles named after their id
-				// To prevent overwriting those, and to prevent accidentally leaking
+				// To prevent overwriting those, and to prevent accidentaly leaking
 				// that a pokemon is on a team through the onStart even triggering
 				// at the start of a match, users with pokemon names will need their
 				// statuses to end in "user".
-				name = `${name}user`;
+				name = name + 'user';
 			}
 			// Add the mon's status effect to it as a volatile.
 			const status = this.dex.conditions.get(name);
@@ -3148,6 +3181,49 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				this.dex.forGen(9).species.get((pokemon.illusion || pokemon).species.name).types.join('/') &&
 				!pokemon.terastallized) {
 				this.add('-start', pokemon, 'typechange', (pokemon.illusion || pokemon).getTypes(true).join('/'), '[silent]');
+			}
+
+			if (pokemon.side.hhBoost) pokemon.addVolatile('helpinghand');
+			if (pokemon.side.reviveOnSwitchIn) {
+				pokemon.side.reviveOnSwitchIn = false;
+				this.actions.useMove('Revival Blessing', pokemon);
+			}
+		},
+		onHit(target, source, move) {
+			source.side.lastMove = move.id;
+		},
+		onUpdate() {
+			for (const pokemon of this.getAllPokemon()) {
+				if (pokemon.species.id === 'ironthorns' && pokemon.getAbility().id === 'autorepair' && !pokemon.hp && !pokemon.abilityState.reviveStarted) {
+					pokemon.abilityState.reviveStarted = true;
+					pokemon.abilityState.deathTurn = this.turn;
+				}
+				if (pokemon.species.id === 'ironthorns' && pokemon.getAbility().id === 'autorepair' && !pokemon.hp && pokemon.abilityState.reviveStarted) {
+					let turnCount = this.turn - pokemon.abilityState.deathTurn;
+					if (turnCount >= 6) {
+						pokemon.fainted = false;
+						pokemon.faintQueued = false;
+						pokemon.subFainted = false;
+						pokemon.status = '';
+						pokemon.hp = 1;
+						pokemon.sethp(1);
+						pokemon.side.pokemonLeft++;
+						pokemon.abilityState.reviveStarted = false;
+						this.add('-message', `${pokemon.getAbility().name} activated!`);
+						this.add('-message', `${pokemon.name} is back in the fight!`);
+					}
+				}
+				if (pokemon.item && pokemon.item === 'colossuscarrier' && pokemon.abilityState.carrierItems) {
+					let format = this.format;
+					if (!format.getSharedItems) format = this.dex.formats.get('gen9superstaffbrosultimate');
+					for (const item of format.getSharedItems!(pokemon)) {
+						if (!pokemon.m.sharedItemsUsed) pokemon.m.sharedItemsUsed = [];
+						if (pokemon.m.sharedItemsUsed.includes(item)) continue;
+						const effect = 'item:' + item;
+						delete pokemon.volatiles[effect];
+						pokemon.addVolatile(effect);
+					}
+				}
 			}
 		},
 	},

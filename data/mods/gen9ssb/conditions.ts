@@ -21,6 +21,285 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 	IMPORTANT: Obtain the username from getName
 	*/
 	// Please keep statuses organized alphabetically based on staff member name!
+	// MUST BE MANUALLY SET AND REMOVED IN ALL CASES.
+	// Trey
+	deltacharge: {
+		name: "Delta Charge",
+		onStart(pokemon) {
+			this.add('-anim', pokemon, 'Growth', pokemon);
+			this.add('-message', `${pokemon.name} is preparing to attack!`);
+			this.effectState.damaged = false;
+		},
+		onHit(target, source, move) {
+			if (move.category !== 'Status') this.effectState.damaged = true;
+		},
+		onModifyMove(move, pokemon) {
+			if (this.effectState.damaged) {
+				move.basePower = move.basePower / 2;
+			} else if (this.effectState.damaged === false) {
+				move.critRatio = 6;
+			}
+		},
+	},
+	// Trey
+	deltadrop: {
+		name: "Delta Drop",
+		effectType: 'Condition',
+		onSideStart(side, source) {
+			this.add('-sidestart', side, 'move: Grand Delta', '[silent]');
+			this.add('-message', `${side.active[0].name} and their allies' defenses were permanently weakened!`);
+		},
+		onModifyDef(def, pokemon) {
+			return this.chainModify(0.5);
+		},
+		onModifySpD(spd, pokemon) {
+			return this.chainModify(0.5);
+		},
+	},
+	cannotBeCrit: {
+		name: "cannotBeCrit",
+		onCriticalHit: false,
+	},
+	// Kusanali
+	akashaseeds: {
+		name: "Akasha Seeds",
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Akasha Seeds', '[silent]');
+			this.add('-anim', pokemon, 'Leech Seed', pokemon);
+			this.add('-start', `Akasha Seeds were planted under ${pokemon.name}!`);
+		},
+		onDamagingHit(damage, target, source, move) {
+			if (move.category !== 'Status') {
+				if (!target.hasType('Grass')) target.addType('Grass');
+				this.boost({ spe: -2 }, target);
+				this.add('-message', `${target.name}'s Akasha Seeds bloomed!`);
+				target.removeVolatile('akashaseeds');
+				this.add('-end', pokemon, 'Akasha Seeds', '[silent]');
+			}
+		},
+		onSwitchOut(pokemon) {
+			pokemon.removeVolatile('akashaseeds');
+			this.add('-end', pokemon, 'Akasha Seeds', '[silent]');
+		},
+	},
+	// Kusanali
+	courtofdreams: {
+		name: "Court of Dreams",
+		effectType: 'Condition',
+		duration: 5,
+		onSideStart(side, source) {
+			this.add('-sidestart', side, 'Court of Dreams', '[silent]');
+			this.add('-message', `${source.name} summoned Court of Dreams!`);
+			this.effectState.sourcePokemon = source;
+		},
+		onBasePower(basePower, source, target, move) {
+			let totalMod = 1;
+			if (source === this.effectState.sourcePokemon) return;
+			if (target.runEffectiveness(move) > 0) {
+				this.debug(`court of dreams super effective buff`);
+				totalMod += 0.3;
+			}
+			if (move.type === 'Grass') {
+				this.debug(`court of dreams grass buff`);
+				totalMod += 0.3;
+			}
+			return this.chainModify(totalMod);
+		},
+		onModifyAccuracy(accuracy) {
+			if (typeof accuracy !== 'number') return;
+			if (source === this.effectState.sourcePokemon) return;
+			return this.chainModify(1.1);
+		},
+		onResidual() {
+			this.add('-message', `Court of Dreams enchants the battlefield!`);
+		},
+		onSideEnd(side) {
+			this.add('-message', `Court of Dreams faded away!`);
+		},
+	},
+	// PokeKart
+	blooper: {
+		name: "Blooper",
+		onBeforeMove(pokemon, target, move) {
+			if (pokemon === target) return;
+			// Generally, moves with accuracy set to 'true' that are also status are
+			// harmless targetless moves (Misty Terrain, Rain Dance, Safeguard, etc) so these cases are skipped
+			if (move.category === 'Status' && move.accuracy === true) return;
+			move.accuracy = 0;
+			pokemon.removeVolatile('blooper');
+		},
+		onEnd(pokemon) {
+			this.add('-message', `${pokemon.name}'s Blooper ink faded away!`);
+		},
+	},
+	/*
+	spinyshell: {
+		name: "Spiny Shell",
+		effectType: 'Condition',
+		duration: 2,
+		onSideEnd(side) {
+			let target;
+			let highest = 0;
+			const source = this.effectState.effectSource;
+			const move = {
+				move: 'Iron Head',
+				id: 'ironhead',
+				basePower: 600,
+				pp: 10,
+				maxpp: 25,
+				target: 'normal',
+				disabled: false,
+				used: false,
+			};
+			for (const pokemon of side.pokemon) {
+				if (pokemon.hp > highest) {
+					highest = pokemon.hp;
+					target = pokemon;
+				}
+			}
+			if (!target || !highest) {
+				this.add('-message', `ERROR: No target found. Contact the developer.`);
+				return;
+			}
+			const damage = this.actions.getDamage(source, target, move);
+			if (!damage || damage <= 0) {
+				this.add('-immune', target);
+				return;
+			}
+			if (target.isActive) {
+				this.add('-anim', target, 'Present', target);
+				this.add('-anim', target, 'Explosion', target);
+				this.add('-anim', target, 'Play Nice', target);
+				this.damage(damage, target, source);
+			} else {
+				if (damage > target.hp) {
+					target.hp = 0;
+				} else {
+					target.hp -= damage;
+				}
+			}
+			this.add('-message', `${target.name} was hit by ${source.name}'s Spiny Shell!`);
+		},
+	},
+	lightning: {
+		name: "Lightning",
+		effectType: 'Condition',
+		duration: 3,
+		onSideStart(side) {
+			this.add('-anim', pokemon, 'Thunderbolt', pokemon);
+			for (const pokemon of side.pokemon) {
+				if (pokemon.fainted || !pokemon.hp) continue;
+				pokemon.abilityState.originalMaxHp = pokemon.maxhp;
+				pokemon.maxhp /= 2;
+				pokemon.baseMaxhp /= 2;
+				this.add('-message', `${pokemon.name}'s max HP was halved!`);
+			}
+		},
+		onSideEnd(side) {
+			this.add('-anim', pokemon, 'Growth', pokemon);
+			for (const pokemon of side.pokemon) {
+				if (pokemon.fainted || !pokemon.hp) continue;
+				pokemon.maxhp = pokemon.abilityState.originalMaxHp;
+				pokemon.baseMaxhp = pokemon.abilityState.originalMaxHp;
+				this.add('-heal', pokemon, pokemon.getHealth, '[silent]')
+				this.add('-message', `${pokemon.name} returned to normal size!`);
+			}
+		},
+	},
+	*/
+	megamushroom: {
+		name: "Mega Mushroom",
+		duration: 3,
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Mega Mushroom', '[silent]');
+			this.add('-anim', pokemon, 'Growth', pokemon);
+			pokemon.abilityState.originalMaxHp = pokemon.maxhp;
+			pokemon.maxhp *= 2;
+			pokemon.baseMaxhp *= 2;
+			pokemon.hp *= 2;
+			this.add('-heal', pokemon, pokemon.getHealth);
+			this.add('-message', `${pokemon.name}'s HP was doubled!`);
+		},
+		onModifyMove(move, pokemon) {
+			move.onHit = function (t, s, m) {
+				if (m.category === 'Status' || t === s || t.volatiles['quash']) return;
+				t.addVolatile('quash');
+			};
+		},
+		onSwitchOut(pokemon) {
+			pokemon.removeVolatile('megamushroom');
+		},
+		onEnd(pokemon) {
+			this.add('-end', pokemon, 'Mega Mushroom', '[silent]');
+			this.add('-anim', pokemon, 'Minimize', pokemon);
+			pokemon.maxhp = pokemon.abilityState.originalMaxHp;
+			pokemon.baseMaxhp = pokemon.abilityState.originalMaxHp;
+			pokemon.hp /= 2;
+			this.add('-heal', pokemon, pokemon.getHealth, '[silent]');
+			this.add('-message', `${pokemon.name} returned to normal size!`);
+		},
+	},
+	boo: {
+		name: "Boo",
+		duration: 2,
+		onStart(pokemon) {
+			this.add('-anim', pokemon, 'Mist', pokemon);
+			this.add('-anim', pokemon, 'Explosion', pokemon);
+			this.add('-message', `${pokemon.name} vanished!`);
+			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
+			const oldBase = this.dex.moves.get(pokemon.moveSlots[3].id);
+			const booBase = this.dex.moves.get(target.moveSlots[3].id);
+			const oldMove = {
+				move: oldBase.name,
+				id: oldBase.id,
+				pp: (oldBase.noPPBoosts || oldBase.isZ) ? oldBase.pp : oldBase.pp * 8 / 5,
+				maxpp: (oldBase.noPPBoosts || oldBase.isZ) ? oldBase.pp : oldBase.pp * 8 / 5,
+				target: oldBase.target,
+				disabled: false,
+				used: false,
+			};
+			const booMove = {
+				move: booBase.name,
+				id: booBase.id,
+				pp: (booBase.noPPBoosts || booBase.isZ) ? booBase.pp : booBase.pp * 8 / 5,
+				maxpp: (booBase.noPPBoosts || booBase.isZ) ? booBase.pp : booBase.pp * 8 / 5,
+				target: booBase.target,
+				disabled: false,
+				used: false,
+			};
+			pokemon.moveSlots[3] = booMove;
+			this.effectState.oldMove = oldMove;
+		},
+		onModifyPriority(priority, pokemon, target, move) {
+			return priority + 1;
+		},
+		onDisableMove(pokemon) {
+			for (const moveSlot of pokemon.moveSlots) {
+				if (moveSlot.id !== pokemon.moveSlots[3].id) {
+					pokemon.disableMove(moveSlot.id);
+				}
+			}
+		},
+		onTrapPokemon(pokemon) {
+			pokemon.tryTrap();
+		},
+		onFoeBeforeMovePriority: 15,
+		onFoeBeforeMove(attacker, defender, move) {
+			if (defender.volatiles['boo']) {
+				// need to prefer making the move fail as opposed to just having the move miss, like Phantom Force would normally work.
+				// this way the user is not targeted by a move mid-vanish and does not reappear earlier than anticipated.
+				this.debug(`${move.id} fail due to boo vanish`);
+				return null;
+			}
+		},
+		onBeforeMove(pokemon) {
+			pokemon.removeVolatile('boo');
+			this.add('-anim', pokemon, 'Spectral Thief', pokemon);
+		},
+		onEnd(pokemon) {
+			pokemon.moveSlots[3] = this.effectState.oldMove;
+		},
+	},
 	aegii: {
 		noCopy: true,
 		onStart() {
