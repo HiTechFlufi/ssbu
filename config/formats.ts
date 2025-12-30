@@ -3190,7 +3190,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 			}
 		},
 		onHit(target, source, move) {
-			source.side.lastMove = move.id;
+			source.side.lastMoveUsed = move.id;
 		},
 		onUpdate() {
 			for (const pokemon of this.getAllPokemon()) {
