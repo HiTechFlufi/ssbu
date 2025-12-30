@@ -3126,7 +3126,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				// Safeguard against moves that hit inactive Pokemon, sometimes causing Pokemon to be at or below 0 HP but not fainted.
 				if (pokemon.hp <= 0 && !pokemon.fainted) pokemon.hp = 0;
 				if (pokemon.getAbility().id === 'autorepair') {
-					if (pokemon.abilityState.permdis || pokemon.fainted || pokemon.isActive) continue;
+					if (pokemon.fainted || pokemon.isActive) continue;
 					if (pokemon.hp >= pokemon.maxhp) {
 						pokemon.hp = pokemon.maxhp;
 						continue;
@@ -3141,22 +3141,12 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 					pokemon.clearStatus();
 				}
 			}
-			for (const pokemon of this.getAllActive()) {
-				if (pokemon.species.id === 'mimikyubusted') {
-					if (!pokemon.abilityState.dollDur || pokemon.abilityState.dollDur <= 0) {
-						pokemon.formeChange('Mimikyu');
-						pokemon.abilityState.dollDur = 0;
-					} else if (pokemon.abilityState.dollDur) {
-						pokemon.abilityState.dollDur--;
-					}
-				}
-			}
 		},
 		onSwitchInPriority: 100,
 		onSwitchIn(pokemon) {
 			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
 			const ability = target.getAbility();
-			if (pokemon.abilityState.ran) pokemon.addVolatile('shikigamiran');
+			if (pokemon.ran) pokemon.addVolatile('shikigamiran');
 			if (ability && pokemon.item.id === 'sketchbook') {
 				const effect = 'ability:' + ability.id;
 				pokemon.addVolatile(effect);
@@ -3194,12 +3184,12 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 		},
 		onUpdate() {
 			for (const pokemon of this.getAllPokemon()) {
-				if (pokemon.species.id === 'ironthorns' && pokemon.getAbility().id === 'autorepair' && !pokemon.hp && !pokemon.abilityState.reviveStarted) {
-					pokemon.abilityState.reviveStarted = true;
-					pokemon.abilityState.deathTurn = this.turn;
+				if (pokemon.species.id === 'ironthorns' && pokemon.getAbility().id === 'autorepair' && !pokemon.hp && !pokemon.reviveStarted) {
+					pokemon.reviveStarted = true;
+					pokemon.deathTurn = this.turn;
 				}
-				if (pokemon.species.id === 'ironthorns' && pokemon.getAbility().id === 'autorepair' && !pokemon.hp && pokemon.abilityState.reviveStarted) {
-					let turnCount = this.turn - pokemon.abilityState.deathTurn;
+				if (pokemon.species.id === 'ironthorns' && pokemon.getAbility().id === 'autorepair' && !pokemon.hp && pokemon.reviveStarted) {
+					let turnCount = this.turn - pokemon.deathTurn;
 					if (turnCount >= 6) {
 						pokemon.fainted = false;
 						pokemon.faintQueued = false;
@@ -3208,12 +3198,12 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 						pokemon.hp = 1;
 						pokemon.sethp(1);
 						pokemon.side.pokemonLeft++;
-						pokemon.abilityState.reviveStarted = false;
+						pokemon.reviveStarted = false;
 						this.add('-message', `${pokemon.getAbility().name} activated!`);
 						this.add('-message', `${pokemon.name} is back in the fight!`);
 					}
 				}
-				if (pokemon.item && pokemon.item === 'colossuscarrier' && pokemon.abilityState.carrierItems) {
+				if (pokemon.item && pokemon.item === 'colossuscarrier' && pokemon.carrierItems) {
 					let format = this.format;
 					if (!format.getSharedItems) format = this.dex.formats.get('gen9superstaffbrosultimate');
 					for (const item of format.getSharedItems!(pokemon)) {

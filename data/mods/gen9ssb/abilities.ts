@@ -46,8 +46,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			}
 		},
 		onUpdate(pokemon) {
-			if (pokemon.hp < pokemon.maxhp / 2 && !pokemon.abilityState.flActivated) {
-				pokemon.abilityState.flActivated = true;
+			if (pokemon.hp < pokemon.maxhp / 2 && !pokemon.flActivated) {
+				pokemon.flActivated = true;
 				this.add('-ability', pokemon, 'Adaptive Fighter');
 				this.field.addPseudoWeather('fairylock');
 			}
@@ -105,13 +105,13 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		desc: "This Pokemon's Attack increases by 1 stage whenever it is damaged by an attacking move. This Pokemon takes halved damage when at full HP. After taking 2 hits, transforms into Annihilape. After taking 4 hits, Endure becomes Rage Fist with 1 PP. After taking 6 hits. Rage Fist's PP is restored. Attacks recover 1/3 of damage dealt as Annihilape.",
 		shortDesc: "Damaged: +1 ATK; Multiscale; Varying effects as damage is taken.",
 		onStart(pokemon) {
-			if (!pokemon.abilityState.hits) pokemon.abilityState.hits = 0;
-			if (pokemon.abilityState.transformed && pokemon.species.id !== 'annihilape') pokemon.formeChange('Annihilape');
+			if (!pokemon.hits) pokemon.hits = 0;
+			if (pokemon.transformed && pokemon.species.id !== 'annihilape') pokemon.formeChange('Annihilape');
 		},
 		onUpdate(pokemon) {
-			if (pokemon.abilityState.hits >= 2 && !pokemon.abilityState.transformed) pokemon.abilityState.transformed = true;
-			if (pokemon.abilityState.transformed && pokemon.species.id !== 'annihilape') pokemon.formeChange('Annihilape');
-			if (pokemon.abilityState.hits >= 4 && pokemon.hasMove('endure')) {
+			if (pokemon.hits >= 2 && !pokemon.transformed) pokemon.transformed = true;
+			if (pokemon.transformed && pokemon.species.id !== 'annihilape') pokemon.formeChange('Annihilape');
+			if (pokemon.hits >= 4 && pokemon.hasMove('endure')) {
 				const slot = pokemon.moves.indexOf('endure');
 				const move = this.dex.moves.get('ragefist');
 				const newSlot = {
@@ -126,12 +126,12 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 				pokemon.moveSlots[slot] = newSlot;
 				pokemon.baseMoveSlots[slot] = newSlot;
 			}
-			if (pokemon.abilityState.hits >= 6 && !pokemon.abilityState.restoreTriggered) {
+			if (pokemon.hits >= 6 && !pokemon.restoreTriggered) {
 				const rf = pokemon.moveSlots.find(move => move.id === 'ragefist');
 				if (rf) {
 					rf.pp = 1;
 					this.add('-message', `Rising Anger restored Rage Fist's PP!`);
-					pokemon.abilityState.restoreTriggered = true;
+					pokemon.restoreTriggered = true;
 				}
 			}
 		},
@@ -149,7 +149,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		onHit(target, source, move) {
 			if (!target.hp) return;
 			if (move?.effectType === 'Move' && source !== target) {
-				target.abilityState.hits++;
+				target.hits++;
 				this.boost({ atk: 1 }, target, target);
 			}
 		},
@@ -202,19 +202,19 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			this.effectState.attacksTaken = 0;
 		},
 		onModifyAtk(atk, pokemon) {
-			if (!pokemon.abilityState.homerun) return;
+			if (!pokemon.homerun) return;
 			return this.chainModify(1.5);
 		},
 		onModifyDef(def, pokemon) {
-			if (!pokemon.abilityState.homerun) return;
+			if (!pokemon.homerun) return;
 			return this.chainModify(1.5);
 		},
 		onModifySpD(spd, pokemon) {
-			if (!pokemon.abilityState.homerun) return;
+			if (!pokemon.homerun) return;
 			return this.chainModify(1.5);
 		},
 		onModifySTAB(stab, source, target, move) {
-			if (!source.abilityState.homerun) return;
+			if (!source.homerun) return;
 			if (move.forceSTAB || source.hasType(move.type)) {
 				if (stab === 2) {
 					return 2.25;
@@ -299,8 +299,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 				pokemon.volatiles['torment'].duration++;
 			}
 			for (const target of this.getAllActive()) {
-				if (target.abilityState.eotSwitch) {
-					target.abilityState.eotSwitch = false;
+				if (target.eotSwitch) {
+					target.eotSwitch = false;
 					target.forceSwitchFlag = true;
 				}
 			}
@@ -314,7 +314,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		onAfterMoveSecondarySelf(source, target, move) {
 			if (this.effectState.koTrigger) {
 				target.trySetStatus('par', source);
-				target.abilityState.eotSwitch = true;
+				target.eotSwitch = true;
 				this.effectState.koTrigger = false;
 			}
 			if (target.getMoveHitData(move).crit && !this.effectState.ziranUsed) {
@@ -345,8 +345,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		shortDesc: "Survives a KO attack with 1 HP. Moves have 1.33x/2x power.",
 		desc: "If this Pokemon would be knocked out by an attack, it survives at 1 HP. Once per battle. This Pokemon's moves have 1.33x power, or 2x power if this Pokemon has 1 HP remaining.",
 		onDamage(damage, target, source, effect) {
-			if (damage >= target.hp && effect && effect.effectType === 'Move' && !target.abilityState.forceActivated) {
-				target.abilityState.forceActivated = true;
+			if (damage >= target.hp && effect && effect.effectType === 'Move' && !target.forceActivated) {
+				target.forceActivated = true;
 				this.add('-ability', target, 'Force of Will');
 				this.add('-anim', target, 'Inferno', target);
 				this.add('-message', `${target.name} isn't backing down!`);
@@ -371,8 +371,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		shortDesc: "See '/ssb Saint Deli' for more!",
 		onUpdate(pokemon) {
 			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
-			if (this.effectState.revivalBlessing && !pokemon.abilityState.rbProc) {
-				pokemon.abilityState.rbProc = true;
+			if (this.effectState.revivalBlessing && !pokemon.rbProc) {
+				pokemon.rbProc = true;
 				this.effectState.revivalBlessing = false;
 				this.effectState.killMe = true;
 				this.actions.useMove('Revival Blessing', pokemon);
@@ -420,12 +420,12 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		onDamage(damage, target, source, effect) {
 			if (effect?.effectType === 'Move' && target !== source && damage >= target.hp) {
 				const move = this.dex.moves.get(effect.id);
-				if (move.category === 'Special' && target.abilityState.sack) {
+				if (move.category === 'Special' && target.sack) {
 					// Using this to escape from onDamage if being hit in a scenario
 					// where Gift Sack will activate. Without this, Generosity will
 					// see incoming damage, trigger Revival Blessing, then no damage
 					// will be taken due to Gift Sack, giving you a free Revival Blessing.
-					if (target.abilityState.sack.length < 3) return;
+					if (target.sack.length < 3) return;
 				}
 				this.effectState.revivalBlessing = true;
 				return target.hp - 1;
@@ -435,11 +435,11 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			// @ts-ignore
 			const damage = this.actions.getDamage(source, target, move);
 			if (!damage) return;
-			if (move.category === 'Special' && target.abilityState.sack) {
+			if (move.category === 'Special' && target.sack) {
 				// Break from onTryHit if the target has Gift Sack and if it has less than 3 moves in it.
 				// This is because the Gift Sack will absorb the move and nullify damage, meaning we
 				// do not want Revival Blessing to happen.
-				if (target.abilityState.sack.length < 3) return;
+				if (target.sack.length < 3) return;
 			}
 			if (damage >= target.hp) {
 				this.add('-activate', target, 'ability: Generosity');
@@ -458,27 +458,27 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		gen: 9,
 		flags: {},
 		onStart(pokemon) {
-			if (!pokemon.abilityState.coins) pokemon.abilityState.coins = 0;
-			this.effectState.coins = pokemon.abilityState.coins;
+			if (!pokemon.coins) pokemon.coins = 0;
+			this.effectState.coins = pokemon.coins;
 		},
 		onResidual(pokemon) {
-			if (!pokemon.abilityState.coins) pokemon.abilityState.coins = 0;
-			if (pokemon.abilityState.coins === 0) {
+			if (!pokemon.coins) pokemon.coins = 0;
+			if (pokemon.coins === 0) {
 				this.add('-message', `${pokemon.name} boasts... no coins?!`);
 				this.add('-anim', pokemon, 'Splash', pokemon);
 				this.add('-message', 'Aw, man!');
 			} else {
 				this.add('-anim', pokemon, 'Taunt', pokemon);
-				if (pokemon.abilityState.coins === 1) {
+				if (pokemon.coins === 1) {
 					this.add('-message', `${pokemon.name} boasts one coin!`);
 				} else {
-					this.add('-message', `${pokemon.name} boasts ${pokemon.abilityState.coins} coins!`);
+					this.add('-message', `${pokemon.name} boasts ${pokemon.coins} coins!`);
 				}
 			}
 		},
 		onUpdate(pokemon) {
-			if (!pokemon.abilityState.coins) pokemon.abilityState.coins = 0;
-			this.effectState.coins = pokemon.abilityState.coins;
+			if (!pokemon.coins) pokemon.coins = 0;
+			this.effectState.coins = pokemon.coins;
 		},
 		onModifyWeight(weighthg) {
 			return weighthg * this.effectState.coins;
@@ -486,14 +486,14 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		onAfterMoveSecondarySelf(source, target, move) {
 			if (['payday', 'stockpile'].includes(move.id)) {
 				this.add('-activate', source, 'ability: Cash Grab');
-				if (!source.abilityState.coins) source.abilityState.coins = 0;
-				if (!source.abilityState.pdTriggers) source.abilityState.pdTriggers = 0;
-				source.abilityState.pdTriggers++;
-				const gain = this.random((source.abilityState.pdTriggers * 3) + 1);
+				if (!source.coins) source.coins = 0;
+				if (!source.pdTriggers) source.pdTriggers = 0;
+				source.pdTriggers++;
+				const gain = this.random((source.pdTriggers * 3) + 1);
 				if (!gain) return;
 				this.add('-anim', source, 'Pay Day', source);
 				this.add('-anim', source, 'Tickle', source);
-				source.abilityState.coins += gain;
+				source.coins += gain;
 			}
 		},
 	},
@@ -585,11 +585,11 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		gen: 9,
 		flags: {},
 		onStart(pokemon) {
-			if (pokemon.abilityState.charmBoost) pokemon.abilityState.charmBoost = false;
+			if (pokemon.charmBoost) pokemon.charmBoost = false;
 			let statsN = ['HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed'];
 			let stats = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
 			let boostedStat = this.sample(stats);
-			pokemon.abilityState.charmBoost = boostedStat;
+			pokemon.charmBoost = boostedStat;
 			switch (boostedStat) {
 				case 'hp':
 					pokemon.hp *= 1.5;
@@ -689,7 +689,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		shortDesc: "If Doublade, changes between 1st/2nd Caliber each turn.",
 		flags: {},
 		onStart(pokemon) {
-			pokemon.abilityState.caliber = 1;
+			pokemon.caliber = 1;
 			if (pokemon.hp > pokemon.maxhp / 3) {
 				this.add('-anim', pokemon, 'Swords Dance', pokemon);
 				this.add('-anim', pokemon, 'Secret Sword', pokemon);
@@ -709,8 +709,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			}
 		},
 		onResidual(pokemon) {
-			if (pokemon.abilityState.caliber === 1) {
-				pokemon.abilityState.caliber = 2;
+			if (pokemon.caliber === 1) {
+				pokemon.caliber = 2;
 				this.add('-message', `${pokemon.name} converted to Second Caliber!`);
 				pokemon.set.shiny = true;
 				const details = pokemon.species.name + (pokemon.level === 100 ? '' : ', L' + pokemon.level) +
@@ -734,8 +734,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 					pokemon.baseMoveSlots[index] = moveFill;
 					index++;
 				}
-			} else if (pokemon.abilityState.caliber === 2) {
-				pokemon.abilityState.caliber = 1;
+			} else if (pokemon.caliber === 2) {
+				pokemon.caliber = 1;
 				this.add('-message', `${pokemon.name} converted to First Caliber!`);
 				pokemon.set.shiny = false;
 				const details = pokemon.species.name + (pokemon.level === 100 ? '' : ', L' + pokemon.level) +
@@ -785,9 +785,9 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			if (target.hp > target.maxhp / 2) {
 				// Do not cap at half HP if HP was already capped at half this battle, OR if species is not Complete
 				// Damage should only cap at half HP when transforming from Complete to Zygarde-50
-				if (target.abilityState.halfCapped || target.species.id !== 'zygardecomplete') return;
+				if (target.halfCapped || target.species.id !== 'zygardecomplete') return;
 				if (target.hp - damage < target.maxhp / 2) {
-					target.abilityState.halfCapped = true;
+					target.halfCapped = true;
 					return target.hp - target.maxhp / 2;
 				}
 			}
@@ -795,24 +795,24 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			if (target.hp <= target.maxhp / 2 && target.hp > target.maxhp / 4) {
 				// Do not cap at 1/4 HP if HP was already capped at 1/4 this battle, OR if species is not Zygarde-50
 				// Damage should only cap at 1/4 HP when transforming from Zygarde-50 to Zygarde-10
-				if (target.abilityState.quarterCapped || target.species.id !== 'zygarde') return;
+				if (target.quarterCapped || target.species.id !== 'zygarde') return;
 				if (target.hp - damage < target.maxhp / 4) {
-					target.abilityState.quarterCapped = true;
+					target.quarterCapped = true;
 					return target.hp - target.maxhp / 4;
 				}
 			}
 		},
 		onUpdate(pokemon) {
 			if (pokemon.hp <= pokemon.maxhp / 2 && pokemon.hp > pokemon.maxhp / 4 && pokemon.species.id !== 'zygarde') {
-				if (pokemon.abilityState.transformed50) return;
+				if (pokemon.transformed50) return;
 				this.add('-activate', pokemon, 'ability: Cell Deconstruct');
 				changeSet(this, pokemon, ssbSets['Varnava-50'], true);
-				pokemon.abilityState.transformed50 = true;
+				pokemon.transformed50 = true;
 			} else if (pokemon.hp <= pokemon.maxhp / 4 && pokemon.species.id !== 'zygarde10') {
-				if (pokemon.abilityState.transformed10) return;
+				if (pokemon.transformed10) return;
 				this.add('-activate', pokemon, 'ability: Cell Deconstruct');
 				changeSet(this, pokemon, ssbSets['Varnava-25'], true);
-				pokemon.abilityState.transformed10 = true;
+				pokemon.transformed10 = true;
 			}
 		},
 	},
@@ -837,10 +837,10 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		name: "Love of the Journey",
 		gen: 9,
 		onStart(pokemon) {
-			if (!pokemon.abilityState.started) {
+			if (!pokemon.started) {
 				this.add(`raw|<b>${pokemon.name}</b>!<br>Your journey starts here!<br>Good luck!`);
 				this.add('-anim', pokemon, 'Splash', pokemon);
-				pokemon.abilityState.started = true;
+				pokemon.started = true;
 			}
 		},
 		onFaint(pokemon) {
@@ -924,7 +924,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			if (effect?.effectType === 'Move' && ['mimikyu', 'mimikyutotem'].includes(target.species.id) && damage >= target.hp) {
 				this.add('-activate', target, 'ability: Dollkeeper');
 				target.formeChange('Mimikyu-Busted');
-				target.abilityState.dollDur = 3;
+				target.dollDur = 3;
 				target.hp = target.baseMaxhp;
 				this.add('-heal', target, target.getHealth, '[silent]');
 				source.side.addSideCondition('Cursed Doll', target);
@@ -992,9 +992,9 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
 			// Replace Ability
 			if (target.ability !== 'perfectcopy') {
-				this.singleEvent('End', pokemon.getAbility(), pokemon.abilityState, pokemon);
+				this.singleEvent('End', pokemon.getAbility(), pokemon, pokemon);
 				pokemon.setAbility(target.getAbility().id);
-				pokemon.abilityState = { id: this.toID(target.ability), target: pokemon };
+				pokemon = { id: this.toID(target.ability), target: pokemon };
 			}
 			// Learning An Opponent's Move
 			let possibleMoves = [];
@@ -1391,12 +1391,12 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			if (this.effectState.runStatic) {
 				this.effectState.runStatic = false;
 				this.add('-anim', pokemon, 'Charge', pokemon);
-				if (!pokemon.abilityState.static) pokemon.abilityState.static = 0;
+				if (!pokemon.static) pokemon.static = 0;
 				if (this.field.terrain === 'electricterrain') {
-					pokemon.abilityState.static += 2;
+					pokemon.static += 2;
 					this.add('-message', `${pokemon.name} received two static counters!`);
 				} else {
-					pokemon.abilityState.static++;
+					pokemon.static++;
 					this.add('-message', `${pokemon.name} received a static counter!`);
 				}
 			}
@@ -1409,30 +1409,30 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		desc: "After using a move, this Pokemon switches to an ally of the user's choice. Sleep turns still burn while inactive.",
 		shortDesc: "User switches after move; sleep turns burn while inactive.",
 		onTryMove(pokemon, target, move) {
-			if (move.id === 'futuresight') pokemon.abilityState.fsSwitch = true;
+			if (move.id === 'futuresight') pokemon.fsSwitch = true;
 		},
 		onAfterMoveSecondarySelf(source, target, move) {
 			source.switchFlag = true;
 		},
 		onSwitchOut(pokemon) {
 			if (pokemon.status === 'slp') {
-				pokemon.abilityState.sleepBurn = true;
-				pokemon.abilityState.ts = this.turn;
+				pokemon.sleepBurn = true;
+				pokemon.ts = this.turn;
 			}
 		},
 		onUpdate(pokemon) {
-			if (pokemon.abilityState.fsSwitch) {
-				pokemon.abilityState.fsSwitch = false;
+			if (pokemon.fsSwitch) {
+				pokemon.fsSwitch = false;
 				pokemon.switchFlag = true;
 			}
 		},
 		onSwitchIn(pokemon) {
-			if (pokemon.abilityState.sleepBurn && pokemon.status === 'slp') {
-				const turnsBurned = this.turn - pokemon.abilityState.ts;
+			if (pokemon.sleepBurn && pokemon.status === 'slp') {
+				const turnsBurned = this.turn - pokemon.ts;
 				pokemon.statusState.time -= turnsBurned;
 				if (!pokemon.statusState.time || pokemon.statusState.time <= 0) pokemon.cureStatus();
-				pokemon.abilityState.sleepBurn = false;
-				pokemon.abilityState.ts = 0;
+				pokemon.sleepBurn = false;
+				pokemon.ts = 0;
 			}
 		},
 		flags: {},
@@ -1446,12 +1446,12 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		shortDesc: "Stores charge to power up Electric moves/Techno Blast.",
 		desc: "This Pokemon stores up to five gauges of charge, starting at five at the start of battle. This Pokemon uses charge gauges to power up Electric moves and Techno Blast. Opposing Electric moves heal the user for 1/4 max HP and increase charge gauges; Electric immunity. Sets Electric Terrain and must recharge if the user runs out of charge gauges. Electric moves and Techno Blast fail if the user does not have enough charge gauges stored.",
 		onStart(pokemon) {
-			if (pokemon.abilityState.gauges === undefined) pokemon.abilityState.gauges = 5;
+			if (pokemon.gauges === undefined) pokemon.gauges = 5;
 		},
 		onBasePower(basePower, attacker, defender, move) {
 			if (move.category === 'Status') return;
-			if (!attacker.abilityState.gauges) attacker.abilityState.gauges = 0;
-			switch (attacker.abilityState.gauges) {
+			if (!attacker.gauges) attacker.gauges = 0;
+			switch (attacker.gauges) {
 				case 0:
 				case 1:
 					return this.chainModify(0.5);
@@ -1473,8 +1473,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			if (target !== source && move.type === 'Electric') {
 				this.heal(target.baseMaxhp / 4);
 				target.addVolatile('charge');
-				if (!target.abilityState.gauges) target.abilityState.gauges = 0;
-				target.abilityState.gauges++;
+				if (!target.gauges) target.gauges = 0;
+				target.gauges++;
 				this.add('-message', `${target.name} was charged up by ${move.name}!`);
 				return null;
 			}
@@ -1483,54 +1483,54 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			// Use gauges for non-status electric moves
 			if (move.category === 'Status') return;
 			if (move.type === 'Electric') {
-				if (pokemon.abilityState.gauges < 2) {
+				if (pokemon.gauges < 2) {
 					this.debug("Not enough battery");
 					this.add('-message', `${pokemon.name} doesn't have enough battery life to use ${move.name}!`);
 					this.add('-anim', pokemon, 'Tickle');
 					return false;
-				} else if (pokemon.abilityState.gauges >= 2) {
-					pokemon.abilityState.gauges -= 2;
+				} else if (pokemon.gauges >= 2) {
+					pokemon.gauges -= 2;
 					this.add('-message', `${pokemon.name} used 40% of its battery life!`);
 				}
 			}
 			// Use gauges for techno blast
 			if (move.id === 'technoblast') {
-				if (pokemon.abilityState.gauges < 3) {
+				if (pokemon.gauges < 3) {
 					this.debug("Not enough battery");
 					this.add('-message', `${pokemon.name} doesn't have enough battery life to use ${move.name}!`);
 					this.add('-anim', pokemon, 'Tickle');
 					return false;
-				} else if (pokemon.abilityState.gauges >= 3) {
-					pokemon.abilityState.gauges -= 3;
+				} else if (pokemon.gauges >= 3) {
+					pokemon.gauges -= 3;
 					this.add('-message', `${pokemon.name} used 60% of its battery life!`);
 				}
 			}
 		},
 		onResidual(pokemon) {
 			// Recharge if out of battery
-			if (pokemon.abilityState.gauges <= 0) {
+			if (pokemon.gauges <= 0) {
 				this.add(`-anim`, pokemon, 'Tickle', pokemon);
 				this.add('-message', `${pokemon.name} is out of battery!`);
 				this.field.setTerrain('electricterrain');
 				pokemon.addVolatile('mustrecharge');
 				// Charge if at maximum battery
-			} else if (pokemon.abilityState.gauges >= 5 && !pokemon.volatiles['charge']) {
+			} else if (pokemon.gauges >= 5 && !pokemon.volatiles['charge']) {
 				this.add(`-anim`, pokemon, 'Charge', pokemon);
 				pokemon.addVolatile('charge');
 				this.add('-message', `${pokemon.name} is brimming with charge!`);
 				// Otherwise state charge amount
 			} else {
 				this.add(`-anim`, pokemon, 'Charge', pokemon);
-				this.add('-message', `${pokemon.name} is at ${(pokemon.abilityState.gauges / 5) * 100}% battery life!`);
+				this.add('-message', `${pokemon.name} is at ${(pokemon.gauges / 5) * 100}% battery life!`);
 			}
 			// Add charge from sleep or terrain
 			let totalCharge = 0;
 			if (pokemon.status === 'slp') totalCharge++;
 			if (this.field.isTerrain('electricterrain')) totalCharge++;
-			if (totalCharge > 0 && pokemon.abilityState.gauges < 5) {
+			if (totalCharge > 0 && pokemon.gauges < 5) {
 				this.add('-activate', pokemon, 'ability: Battery Life');
-				pokemon.abilityState.gauges += totalCharge;
-				if (pokemon.abilityState.gauges > 5) pokemon.abilityState.gauges = 5;
+				pokemon.gauges += totalCharge;
+				if (pokemon.gauges > 5) pokemon.gauges = 5;
 				if (totalCharge === 1) {
 					this.add('-message', `${pokemon.name} is charging its battery!`);
 				}
@@ -1687,25 +1687,25 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		desc: "1.1x Accuracy. Reduces damage from Physical Attacks by 75% and Special Attacks by 30%. Loses 25% for Physical and 10% for Special with each attack received.",
 		shortdesc: "1.1x ACC; +75% DEF/+30% SPD. -33% damage reduction when hit.",
 		onStart(pokemon) {
-			if (!pokemon.abilityState.armor && !pokemon.abilityState.usedArmor) {
+			if (!pokemon.armor && !pokemon.usedArmor) {
 				this.add('-activate', pokemon, 'ability: Scrapworker');
-				pokemon.abilityState.armor = 3;
-				pokemon.abilityState.usedArmor = true;
+				pokemon.armor = 3;
+				pokemon.usedArmor = true;
 				this.add('-message', `${pokemon.name} equipped their armor from Scrapworker!`);
 			}
 		},
 		onSourceModifyDamage(damage, source, target, move) {
 			if (move.category === 'Physical') {
-				if (!target.abilityState.armor) return;
-				if (target.abilityState.armor === 3) return this.chainModify(0.25);
-				if (target.abilityState.armor === 2) return this.chainModify(0.5);
-				if (target.abilityState.armor === 1) return this.chainModify(0.75);
+				if (!target.armor) return;
+				if (target.armor === 3) return this.chainModify(0.25);
+				if (target.armor === 2) return this.chainModify(0.5);
+				if (target.armor === 1) return this.chainModify(0.75);
 			}
 			if (move.category === 'Special') {
-				if (!target.abilityState.armor) return;
-				if (target.abilityState.armor === 3) return this.chainModify(0.7);
-				if (target.abilityState.armor === 2) return this.chainModify(0.8);
-				if (target.abilityState.armor === 1) return this.chainModify(0.9);
+				if (!target.armor) return;
+				if (target.armor === 3) return this.chainModify(0.7);
+				if (target.armor === 2) return this.chainModify(0.8);
+				if (target.armor === 1) return this.chainModify(0.9);
 			}
 		},
 		onSourceModifyAccuracy(accuracy) {
@@ -1714,17 +1714,17 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			return accuracy * 1.1;
 		},
 		onDamagingHit(damage, source, target, move) {
-			if (source.abilityState.armor && source.abilityState.armor > 0) {
-				source.abilityState.armor -= 1;
-				if (source.abilityState.armor > 0) this.add('-message', `${source.name}'s armor was chipped!`);
-				if (source.abilityState.armor === 0) this.add('-message', `${source.name}'s armor broke!`);
+			if (source.armor && source.armor > 0) {
+				source.armor -= 1;
+				if (source.armor > 0) this.add('-message', `${source.name}'s armor was chipped!`);
+				if (source.armor === 0) this.add('-message', `${source.name}'s armor broke!`);
 			}
 		},
 		onBasePower(basePower, pokemon, move) {
-			if (!pokemon.abilityState.enhancement) return;
-			if (pokemon.abilityState.enhancement === 1) return this.chainModify(1.3);
-			if (pokemon.abilityState.enhancement === 2) return this.chainModify(1.82);
-			if (pokemon.abilityState.enhancement === 3) return this.chainModify(2.73);
+			if (!pokemon.enhancement) return;
+			if (pokemon.enhancement === 1) return this.chainModify(1.3);
+			if (pokemon.enhancement === 2) return this.chainModify(1.82);
+			if (pokemon.enhancement === 3) return this.chainModify(2.73);
 		},
 	},
 	// Urabrask
@@ -1838,28 +1838,28 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		desc: "Allows this Pokemon to use Charge up to three times. Deals (100HP*number of charges) damage to target after reaching three charges. Forces user to switch to a random ally. Increases Attack and Speed by 50% for each charge this Pokemon has.",
 		shortDesc: "User can Charge 3x. +50% ATK/SPE for each charge.",
 		onStart(pokemon) {
-			if (pokemon.abilityState.recallActive && !pokemon.item) {
+			if (pokemon.recallActive && !pokemon.item) {
 				pokemon.setItem('inconspicuouscoin');
 				this.add('-item', pokemon, pokemon.getItem(), '[from] item: Inconspicuous Coin');
-				pokemon.abilityState.recallActive = false;
+				pokemon.recallActive = false;
 			}
 		},
 		onSwitchOut(pokemon) {
-			pokemon.abilityState.firedUp = false;
+			pokemon.firedUp = false;
 		},
 		onModifyMove(move, pokemon) {
 			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
 			if (move.id === 'charge') {
-				if (!pokemon.abilityState.charges) pokemon.abilityState.charges = 0;
-				if (pokemon.abilityState.charges > 3) return;
-				pokemon.abilityState.charges += 1;
-				if (pokemon.abilityState.charges > 3) {
+				if (!pokemon.charges) pokemon.charges = 0;
+				if (pokemon.charges > 3) return;
+				pokemon.charges += 1;
+				if (pokemon.charges > 3) {
 					this.add('-activate', pokemon, '[from] ability: Head-On Battery');
 					this.add('-message', `${pokemon.name} is overflowing with charge!`);
 					this.add(`-anim`, pokemon, "Thunderclap", pokemon);
 					this.add(`-anim`, pokemon, "Volt Tackle", target);
-					this.damage(100 * pokemon.abilityState.charges, target, pokemon);
-					pokemon.abilityState.charges = 0;
+					this.damage(100 * pokemon.charges, target, pokemon);
+					pokemon.charges = 0;
 					this.add('-message', `${pokemon.name} was launched away by the impact!`);
 					if (pokemon.hp && !pokemon.fainted) pokemon.forceSwitchFlag = true;
 					return false;
@@ -1868,22 +1868,22 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		},
 		onModifyAtkPriority: 5,
 		onModifyAtk(atk, pokemon) {
-			if (!pokemon.abilityState.charges) return;
+			if (!pokemon.charges) return;
 			this.debug('Charge boost');
-			return this.chainModify(1 + (0.5 * pokemon.abilityState.charges));
+			return this.chainModify(1 + (0.5 * pokemon.charges));
 		},
 		onModifySpe(spe, pokemon) {
-			if (!pokemon.abilityState.charges) return;
+			if (!pokemon.charges) return;
 			this.debug('Charge boost');
-			return this.chainModify(1 + (0.5 * pokemon.abilityState.charges));
+			return this.chainModify(1 + (0.5 * pokemon.charges));
 		},
 		onModifyCritRatio(critRatio, source, target) {
-			if (source.abilityState.firedUp) return critRatio + 2;
+			if (source.firedUp) return critRatio + 2;
 		},
 		onModifyAccuracyPriority: -1,
 		onModifyAccuracy(accuracy, target, source, move) {
 			if (typeof accuracy !== 'number') return;
-			if (target.abilityState.firedUp) {
+			if (target.firedUp) {
 				return this.chainModify([3277, 4096]);
 			}
 		},
@@ -1955,14 +1955,14 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		// Damage Recovery
 		onDamagePriority: 1,
 		onDamage(damage, target, source, effect) {
-			if (!target.abilityState.damageThisTurn) target.abilityState.damageThisTurn = 0;
-			target.abilityState.damageThisTurn += damage;
+			if (!target.damageThisTurn) target.damageThisTurn = 0;
+			target.damageThisTurn += damage;
 		},
 		onResidual(pokemon) {
-			if (!pokemon.abilityState.damageThisTurn) return;
-			if (pokemon.abilityState.damageThisTurn > 0) {
-				this.heal(pokemon.abilityState.damageThisTurn / 4, pokemon, pokemon, this.effect);
-				pokemon.abilityState.damageThisTurn = 0;
+			if (!pokemon.damageThisTurn) return;
+			if (pokemon.damageThisTurn > 0) {
+				this.heal(pokemon.damageThisTurn / 4, pokemon, pokemon, this.effect);
+				pokemon.damageThisTurn = 0;
 			}
 		},
 		onUpdate(pokemon) {
@@ -2042,13 +2042,13 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			this.add('-anim', pokemon, 'Ember', pokemon);
 			this.add('-message', `${pokemon.name} is preparing Dynamite Arrow!`);
 			this.add('-message', `${pokemon.name} is building concentration!`);
-			pokemon.abilityState.damaged = false;
-			pokemon.abilityState.concentrated = true;
+			pokemon.damaged = false;
+			pokemon.concentrated = true;
 		},
 		onDamagingHit(damage, target, source, move) {
-			if (!target.abilityState.damaged && target.abilityState.concentrated) {
-				target.abilityState.damaged = true;
-				target.abilityState.concentrated = false;
+			if (!target.damaged && target.concentrated) {
+				target.damaged = true;
+				target.concentrated = false;
 				this.add('-message', `${target.name} lost their concentration!`);
 			}
 		},
@@ -2059,25 +2059,25 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			return true;
 		},
 		onResidual(pokemon, target) {
-			if (!pokemon.abilityState.damaged && !pokemon.abilityState.concentrated) {
-				pokemon.abilityState.concentrated = true;
+			if (!pokemon.damaged && !pokemon.concentrated) {
+				pokemon.concentrated = true;
 				this.add('-anim', pokemon, 'Focus Energy', pokemon);
 				this.add('-message', `${pokemon.name} is building concentration!`);
 				return;
 			}
-			pokemon.abilityState.damaged = false;
+			pokemon.damaged = false;
 		},
 		onBasePowerPriority: 29,
 		onBasePower(basePower, pokemon, target, move) {
-			if (pokemon.abilityState.concentrated) {
+			if (pokemon.concentrated) {
 				this.debug(`concentration bp boost, concentration disabled`);
-				pokemon.abilityState.concentrated = false;
+				pokemon.concentrated = false;
 				return move.basePower * 1.5;
 			}
 			return move.basePower;
 		},
 		onModifyCritRatio(critRatio, pokemon, target, move) {
-			if (pokemon.abilityState.concentrated) {
+			if (pokemon.concentrated) {
 				return move.critRatio + 2;
 			}
 			return move.critRatio;

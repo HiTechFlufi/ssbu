@@ -189,7 +189,7 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 			this.add('-anim', pokemon, 'Thunderbolt', pokemon);
 			for (const pokemon of side.pokemon) {
 				if (pokemon.fainted || !pokemon.hp) continue;
-				pokemon.abilityState.originalMaxHp = pokemon.maxhp;
+				pokemon.originalMaxHp = pokemon.maxhp;
 				pokemon.maxhp /= 2;
 				pokemon.baseMaxhp /= 2;
 				this.add('-message', `${pokemon.name}'s max HP was halved!`);
@@ -199,8 +199,8 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 			this.add('-anim', pokemon, 'Growth', pokemon);
 			for (const pokemon of side.pokemon) {
 				if (pokemon.fainted || !pokemon.hp) continue;
-				pokemon.maxhp = pokemon.abilityState.originalMaxHp;
-				pokemon.baseMaxhp = pokemon.abilityState.originalMaxHp;
+				pokemon.maxhp = pokemon.originalMaxHp;
+				pokemon.baseMaxhp = pokemon.originalMaxHp;
 				this.add('-heal', pokemon, pokemon.getHealth, '[silent]')
 				this.add('-message', `${pokemon.name} returned to normal size!`);
 			}
@@ -213,7 +213,7 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 		onStart(pokemon) {
 			this.add('-start', pokemon, 'Mega Mushroom', '[silent]');
 			this.add('-anim', pokemon, 'Growth', pokemon);
-			pokemon.abilityState.originalMaxHp = pokemon.maxhp;
+			pokemon.originalMaxHp = pokemon.maxhp;
 			pokemon.maxhp *= 2;
 			pokemon.baseMaxhp *= 2;
 			pokemon.hp *= 2;
@@ -232,8 +232,8 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 		onEnd(pokemon) {
 			this.add('-end', pokemon, 'Mega Mushroom', '[silent]');
 			this.add('-anim', pokemon, 'Minimize', pokemon);
-			pokemon.maxhp = pokemon.abilityState.originalMaxHp;
-			pokemon.baseMaxhp = pokemon.abilityState.originalMaxHp;
+			pokemon.maxhp = pokemon.originalMaxHp;
+			pokemon.baseMaxhp = pokemon.originalMaxHp;
 			pokemon.hp /= 2;
 			this.add('-heal', pokemon, pokemon.getHealth, '[silent]');
 			this.add('-message', `${pokemon.name} returned to normal size!`);
@@ -425,8 +425,8 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 		onSourceModifyDamagePriority: -1,
 		onSourceModifyDamage(damage, source, target, move) {
 			if (target.illusion) return;
-			if (target.abilityState.berryWeaken) {
-				target.abilityState.berryWeaken = false;
+			if (target.berryWeaken) {
+				target.berryWeaken = false;
 				return this.chainModify(0.5);
 			}
 		},
@@ -441,7 +441,7 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 				'Babiri Berry', 'Charti Berry', 'Chilan Berry', 'Chople Berry', 'Coba Berry', 'Colbur Berry', 'Haban Berry', 'Kasib Berry', 'Kebia Berry', 'Occa Berry', 'Passho Berry', 'Payapa Berry', 'Rindo Berry', 'Roseli Berry', 'Shuca Berry', 'Tanga Berry', 'Wacan Berry', 'Yache Berry',
 			];
 			// Record if the pokemon ate a berry to resist the attack
-			pokemon.abilityState.berryWeaken = weakenBerries.includes(item.name);
+			pokemon.berryWeaken = weakenBerries.includes(item.name);
 		},
 	},
 	april: {
@@ -2923,7 +2923,7 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 			}
 			// innate
 			if (pokemon.illusion) return;
-			pokemon.abilityState.gluttony = true;
+			pokemon.gluttony = true;
 			this.add('-activate', pokemon, 'ability: Nutrient Boost');
 			this.boost({ def: 1, spd: 1 }, pokemon);
 		},
@@ -2940,7 +2940,7 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 		shortDesc: "Gluttony + Thick Fat + Neuroforce + +1 Def/Sp. Def boost.",
 		onDamage(item, pokemon) {
 			if (pokemon.illusion) return;
-			pokemon.abilityState.gluttony = true;
+			pokemon.gluttony = true;
 		},
 		onSourceModifyAtkPriority: 6,
 		onSourceModifyAtk(atk, attacker, defender, move) {

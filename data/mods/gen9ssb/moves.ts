@@ -77,224 +77,6 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		type: "Poison",
 		target: "normal",
 	},
-	// Horrific17
-	chicxulubimpact: {
-		name: "Chicxulub Impact",
-		category: "Physical",
-		gen: 9,
-		basePower: 150,
-		accuracy: true,
-		pp: 1,
-		priority: 0,
-		flags: { contact: 1 },
-		status: 'brn',
-		sideCondition: "chicxulubimpact",
-		onTryMove(target, source, move) {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source, move) {
-			this.add('-anim', source, 'Draco Meteor', target);
-			this.add('-anim', source, 'V-Create', target);
-			this.add('-anim', target, 'Explosion', target);
-			this.add('-anim', target, 'Inferno', target);
-			if (source.hp < source.maxhp / 2) {
-				for (const side of source.side.foeSidesWithConditions()) {
-					side.addSideCondition('gmaxwildfire', source, move);
-				}
-			} else if (source.hp >= source.maxhp / 2) {
-				this.field.setWeather('desolateland', source, move);
-			}
-		},
-		condition: {
-			duration: 5,
-			onSideStart(side) {
-				this.add('-sidestart', side, 'move: Chicxulub Impact');
-			},
-			durationCallback(target, source) {
-				// Makeshift solution to make the trapping last 4-5 turns; default to 5, but 50% chance it changes to 4 instead
-				// Fire Spin lasts 4-5 turns and I have no fucking clue how this.random works
-				if (this.randomChance(1, 2)) return 4;
-			},
-			onTrapPokemon(pokemon) {
-				pokemon.tryTrap();
-			},
-			onResidual(pokemon) {
-				this.add('-anim', pokemon, 'Fire Spin', pokemon);
-				this.damage(pokemon.maxhp / 8, pokemon, this.effectState.source, this.dex.moves.get('firespin'));
-			},
-			onSideEnd(side) {
-				this.add('-sideend', side, 'move: Chicxulub Impact');
-			},
-		},
-		secondary: null,
-		type: "Fire",
-		target: "allAdjacent",
-	},
-	meteorstrike: {
-		name: "Meteor Strike",
-		category: "Physical",
-		gen: 9,
-		shortDesc: "+50% HP: Sunny Day, BRN, -1/4 HP. -49% HP: 33% recoil.",
-		desc: "If this Pokemon has 50% max HP or higher, -6 priority, summons Sunny Day for 8 turns, burns the target, and the user loses 25% of its maximum HP. If this Pokemon has less than 50% max HP, has 33% recoil.",
-		basePower: 100,
-		accuracy: 100,
-		pp: 5,
-		priority: 0,
-		flags: { protect: 1, metronome: 1, contact: 1 },
-		onTryMove(target, source, move) {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source, move) {
-			this.add('-anim', source, 'Draco Meteor', target);
-			this.add('-anim', source, 'Flare Blitz', target);
-		},
-		onModifyMove(move, pokemon) {
-			if (pokemon.hp >= pokemon.maxhp / 2) {
-				move.status = 'brn';
-				move.weather = 'sunnyday';
-				move.priority = -6;
-				move.onAfterHit = function (t, s, m) {
-					this.damage(s.maxhp / 4, s);
-				};
-			} else {
-				move.recoil = [33, 100];
-			}
-		},
-		secondary: null,
-		type: "Fire",
-		target: "normal",
-	},
-	// Lyssa
-	masochism: {
-		name: "Masochism",
-		basePower: 80,
-		category: "Physical",
-		accuracy: 100,
-		gen: 9,
-		priority: 0,
-		pp: 15,
-		desc: "Restores the item the user last used.",
-		shortDesc: "Restores the item the user last used.",
-		flags: { contact: 1, protect: 1, metronome: 1 },
-		onTryMove(target, source, move) {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source, move) {
-			this.add('-anim', source, 'Mean Look', target);
-			this.add('-anim', source, 'Superpower', target);
-		},
-		onHit(target, source, move) {
-			if (source.item || !source.lastItem) return false;
-			const item = source.lastItem;
-			source.lastItem = '';
-			this.add('-item', source, this.dex.items.get(item), '[from] move: Masochism');
-			source.setItem(item);
-		},
-		secondary: null,
-		type: "Fighting",
-		target: "normal",
-	},
-	// Cinque
-	homerunswing: {
-		name: "Homerun Swing",
-		basePower: 40,
-		category: "Physical",
-		accuracy: true,
-		gen: 9,
-		desc: "Ignores immunities and protection. Homerun Swing - Windup's PP is reduced to 0. If this KOes the target, user's Attack, Defense, and Special Defense are 1.5x permanently, STAB bonus is permanently 2x instead of 1.5x, and restores 35% of its max HP.",
-		shortDesc: "Ignores immunity. If KO: Heals, increases ATK/DEF/SPD, boosts STAB.",
-		priority: 6,
-		pp: 5,
-		isZ: "moogleplushie",
-		ignoreImmunity: true,
-		flags: { contact: 1 },
-		onTryMove(target, source, move) {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source, move) {
-			this.add('-anim', source, 'Teeter Dance', source);
-			this.add('-anim', source, 'Bone Club', target);
-		},
-		onEffectiveness(typeMod, target, type, move) {
-			if (move.type !== 'Ground' || !target) return;
-			if (!target.runImmunity('Ground')) {
-				if (target.hasType('Flying')) return 0;
-			}
-		},
-		basePowerCallback(pokemon, target, move) {
-			if (!pokemon.abilityState.windup) return move.basePower;
-			let power = pokemon.abilityState.windup * 60;
-			return move.basePower + power;
-		},
-		onHit(target, source, move) {
-			this.add('-anim', source, 'Dragon Cheer', source);
-		},
-		onAfterMoveSecondarySelf(pokemon, target, move) {
-			if (!target || target.fainted || target.hp <= 0) {
-				pokemon.abilityState.homerun = true;
-				this.heal(pokemon.baseMaxhp * 0.35, pokemon);
-				this.add('-message', `It's a K.O.!\n${pokemon.name}'s Attack, Defense, and Special Defense increased!`);
-			}
-			if (pokemon.abilityState.windup) {
-				const boosts: SparseBoostsTable = {};
-				boosts.def = -pokemon.abilityState.windup;
-				boosts.spd = -pokemon.abilityState.windup;
-				this.boost(boosts, pokemon, pokemon);
-			}
-			pokemon.deductPP('homerunswingwindup', 64);
-			pokemon.abilityState.windup = 0;
-		},
-		secondary: null,
-		type: "Ground",
-		target: "normal",
-	},
-	homerunswingwindup: {
-		name: "Homerun Swing - Windup",
-		category: "Physical",
-		basePower: 0,
-		accuracy: true,
-		pp: 64,
-		noPPBoosts: true,
-		ignoreImmunity: true,
-		ignoreAbility: true,
-		desc: "Raises user's Defense and Special Defense by 1 stage and increases the power of Homerun Swing. After use, user is trapped and can only select Homerun Swing Windup and Homerun Swing until Homerun Swing is used successfully.",
-		shortDesc: "+1 DEF/SPD/Z-Move power increases. Locks in until Z-move is used.",
-		priority: 0,
-		flags: {},
-		onTryMove(target, source, move) {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source, move) {
-			this.add('-anim', source, 'Dragon Dance', source);
-		},
-		onHit(target, source, move) {
-			this.boost({ def: 1, spd: 1 }, source, source);
-			if (!source.volatiles['homerunswingwindup']) source.addVolatile('homerunswingwindup');
-			if (!source.abilityState.windup) source.abilityState.windup = 0;
-			source.abilityState.windup++;
-			this.add('-message', `${source.name} is winding up!`);
-		},
-		condition: {
-			onTrapPokemon(pokemon) {
-				pokemon.tryTrap();
-			},
-			onDisableMove(pokemon) {
-				for (const move of pokemon.moveSlots) {
-					if (move.id !== 'homerunswingwindup' && move.id !== 'homerunswing') {
-						pokemon.disableMove(move.id);
-					}
-				}
-			},
-			onAfterMove(pokemon, target, move) {
-				if (move.id === 'homerunswing') {
-					pokemon.removeVolatile('homerunswingwindup');
-				}
-			},
-		},
-		secondary: null,
-		type: "Ground",
-		target: "normal",
-	},
 	// PokeKart, o' PokeKart
 	itembox: {
 		name: "Item Box",
@@ -314,15 +96,15 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			this.add('-anim', pokemon, 'Sky Uppercut', pokemon);
 			const items = ['megamushroom', 'triplemushroom', 'tripleredshell', 'star', 'triplebanana', 'boo', 'powblock', 'spinyshell', 'triplegreenshell', 'blooper', 'bulletbill'];
 			const selectedItem = this.sample(items);
-			pokemon.abilityState.itemBox = selectedItem;
+			pokemon.itemBox = selectedItem;
 		},
 		onPrepareHit(target, source, move) {
-			if (!source.abilityState.itemBox) {
+			if (!source.itemBox) {
 				this.add('-fail', source, 'move: Item Box');
 				this.hint(`Error: No item selected on the backend for Item Box.\nContact the developer if you see this.`);
 				return null;
 			}
-			switch (source.abilityState.itemBox) {
+			switch (source.itemBox) {
 				case 'megamushroom':
 					this.add(`raw|<b>Mega Mushroom!</b>`);
 					source.addVolatile('megamushroom');
@@ -667,12 +449,12 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				boost[randomStat] = 1;
 				this.boost(boost, source);
 			}
-			if (!source.abilityState.sack) source.abilityState.sack = [];
-			if (source.abilityState.sack.length) {
-				for (const storedMove of source.abilityState.sack) {
+			if (!source.sack) source.sack = [];
+			if (source.sack.length) {
+				for (const storedMove of source.sack) {
 					this.actions.useMove(storedMove, source, target);
 				}
-				source.abilityState.sack = [];
+				source.sack = [];
 				this.add('-message', `${source.name} emptied its Gift Sack!`);
 			}
 		},
@@ -1114,104 +896,6 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		target: "allySide",
 		type: "Ground",
 	},
-	// Varnava
-	ecosystemdrain: {
-		accuracy: true,
-		basePower: 0,
-		category: "Status",
-		name: "Ecosystem Drain",
-		shortDesc: "Heals; Boosts power next turn; Grassy Terrain.",
-		desc: "Heals the user, and boosts the power of the user's attacks next turn, by an amount dependent on the current Zygarde form. Complete: 25% Heal/Boost; 50%: 50% Heal/Boost; 10%: 25% Heal/Boost. Clears any active weather conditions, if present, and sets Grassy Terrain.",
-		gen: 9,
-		pp: 5,
-		priority: 0,
-		flags: { reflectable: 1, mirror: 1, protect: 1 },
-		onTryMove() {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source, move) {
-			this.add('-anim', source, 'Rototiller', source);
-			this.add('-anim', source, 'Geomancy', source);
-		},
-		onHit(pokemon) {
-			switch (pokemon.species.id) {
-				case 'zygardecomplete':
-					this.heal(pokemon.maxhp / 4, pokemon);
-					pokemon.abilityState.boostMod = 1.25;
-					break;
-				case 'zygarde':
-					this.heal(pokemon.maxhp / 2, pokemon);
-					pokemon.abilityState.boostMod = 1.5;
-					break;
-				case 'zygarde10':
-					this.heal(pokemon.maxhp * 0.75);
-					pokemon.abilityState.boostMod = 1.75;
-					break;
-			}
-			this.field.clearWeather();
-			this.field.setTerrain('grassyterrain');
-		},
-		volatileStatus: 'ecosystemdrain',
-		condition: {
-			duration: 2,
-			onBasePower(basePower, source, target, move) {
-				if (source.abilityState.boostMod && source.abilityState.boostMod > 1) {
-					this.add('-anim', source, 'Absorb', source);
-					this.add('-message', `${move.name} was powered up by Ecosystem Drain!`)
-					return this.chainModify(boostMod);
-				}
-			},
-			onAfterMove(pokemon) {
-				pokemon.abilityState.boostMod = false;
-				pokemon.removeVolatile('ecosystemdrain');
-			},
-			onEnd(pokemon) {
-				if (pokemon.abilityState.boostMod) pokemon.abilityState.boostMod = false;
-			},
-		},
-		secondary: null,
-		target: "self",
-		type: "Grass",
-	},
-	southernislandslastdefense: {
-		accuracy: true,
-		basePower: 300,
-		category: "Physical",
-		name: "Southern Island's Last Defense",
-		shortDesc: "See '/ssb Varnava' for more!",
-		desc: "Fails if user has any remaining healthy allies, or if user has more than 1/4 of its max HP remaining. Transforms into Zygarde-Complete before attacking. Ignores weaknesses and resistances. Damage is calculated using the lower of the opposing Pokemon's two defense stats. If the opposing Pokemon is not knocked out by this attack, the user faints after damage is dealt. If the opposing Pokemon is knocked out by this attack, starts Endure lasting until the end of next turn.",
-		gen: 9,
-		pp: 1,
-		priority: 6,
-		flags: { bypasssub: 1 },
-		ignoreImmunity: true,
-		breaksProtect: true,
-		onTryMove() {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source, move) {
-			const remainingPokemon = source.side.pokemon.filter(pokemon => !pokemon.fainted);
-			if (remainingPokemon.length > 1 || source.hp > source.maxhp / 4) return false;
-			source.formeChange('Zygarde-Complete');
-			this.add('-anim', source, 'Core Enforcer', target);
-			this.add('-anim', source, 'Supersonic Skystrike', target);
-		},
-		onEffectiveness(typeMod, target, type) {
-			return 0;
-		},
-		onAfterMove(pokemon, target, move) {
-			if (!target.side.faintedThisTurn) {
-				pokemon.faint();
-				return;
-			} else if (target.side.faintedThisTurn) {
-				if (!pokemon.volatiles['endure']) pokemon.addVolatile('endure');
-				pokemon.volatiles['endure'].duration = 2;
-			}
-		},
-		secondary: null,
-		target: "normal",
-		type: "Dragon",
-	},
 	// Aevum
 	genesisray: {
 		accuracy: 100,
@@ -1234,7 +918,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			this.add('-message', `${target.name} was encased by Genesis Ray!`);
 		},
 		onDamage(damage, target, source, effect) {
-			target.abilityState.grDamage = damage * 2;
+			target.grDamage = damage * 2;
 		},
 		volatileStatus: 'genesisray',
 		condition: {
@@ -1242,14 +926,14 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			onTryMove(pokemon, target, move) {
 				if (move.flags['contact']) {
 					this.add('-anim', pokemon, 'Terrain Pulse', pokemon);
-					this.damage(pokemon.abilityState.grDamage, pokemon);
+					this.damage(pokemon.grDamage, pokemon);
 					this.add('-message', `${pokemon.name} was assaulted by Genesis Ray!`);
 					pokemon.removeVolatile('genesisray');
 				}
 			},
 			onSwitchOut(pokemon) {
 				this.add('-anim', pokemon, 'Terrain Pulse', pokemon);
-				this.damage(pokemon.abilityState.grDamage, pokemon);
+				this.damage(pokemon.grDamage, pokemon);
 				this.add('-message', `${pokemon.name} was assaulted by Genesis Ray!`);
 				pokemon.removeVolatile('genesisray');
 			},
@@ -1427,7 +1111,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 						moveSlot.pp = moveSlot.maxpp;
 					}
 				}
-				if (source.item === 'colossuscarrier') source.abilityState.carrierItems = [];
+				if (source.item === 'colossuscarrier') source.carrierItems = [];
 			} else {
 				this.add('-anim', source, 'Wake-Up Slap', source);
 				const ally = this.sample(source.side.pokemon);
@@ -1524,7 +1208,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		condition: {
 			duration: 1,
 			onStart(pokemon) {
-				pokemon.abilityState.dollhp = Math.floor(pokemon.maxhp / 4);
+				pokemon.dollhp = Math.floor(pokemon.maxhp / 4);
 				this.add('-message', `${pokemon.name} summoned a Killing Doll!`);
 				if (pokemon.volatiles['partiallytrapped']) {
 					this.add('-end', pokemon, pokemon.volatiles['partiallytrapped'].sourceEffect, '[partiallytrapped]', '[silent]');
@@ -1545,15 +1229,15 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				}
 				this.add('-anim', target, 'Spectral Thief', source);
 				this.damage(damage, source, target, 'move: Killing Doll');
-				if (damage > target.abilityState.dollhp) {
-					damage = target.abilityState.dollhp as number;
+				if (damage > target.dollhp) {
+					damage = target.dollhp as number;
 				}
-				target.abilityState.dollhp -= damage;
+				target.dollhp -= damage;
 				source.lastDamage = damage;
-				if (target.abilityState.dollhp <= 0) {
+				if (target.dollhp <= 0) {
 					if (move.ohko) this.add('-ohko');
 					target.removeVolatile('killingdoll');
-					target.abilityState.dollhp = 0;
+					target.dollhp = 0;
 				} else {
 					this.add('-activate', target, 'move: Killing Doll', '[damage]');
 				}
@@ -1566,10 +1250,10 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				return this.HIT_SUBSTITUTE;
 			},
 			onResidual(pokemon) {
-				if (pokemon.abilityState.dollhp > 0) {
+				if (pokemon.dollhp > 0) {
 					this.add('-anim', pokemon, 'Hex', pokemon);
 					this.add('-message', `Killing Doll haunts the battlefield!`);
-				} else if (!pokemon.abilityState.dollhp || pokemon.abilityState.dollhp <= 0) {
+				} else if (!pokemon.dollhp || pokemon.dollhp <= 0) {
 					this.add('-end', pokemon, 'Killing Doll', '[silent]');
 					pokemon.removeVolatile('killingdoll');
 					this.add('-anim', pokemon, 'Confuse Ray', pokemon);
@@ -1742,7 +1426,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			let stacks = Math.floor(loss/max)
 			if (stacks < 1) stacks = 1;
 			if (stacks > 9) stacks = 9;
-			pokemon.abilityState.stacks = stacks;
+			pokemon.stacks = stacks;
 
 			pokemon.addVolatile('protect');
 			pokemon.addVolatile('turbocharge');
@@ -1757,19 +1441,19 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			},
 			onModifyAtkPriority: 5,
 			onModifyAtk(atk, pokemon) {
-				if (pokemon.abilityState.stacks <= 0) return;
-				let boost = 1 + 0.1 * pokemon.abilityState.stacks;
+				if (pokemon.stacks <= 0) return;
+				let boost = 1 + 0.1 * pokemon.stacks;
 				return this.chainModify(boost);
 			},
 			onModifySpAPriority: 5,
 			onModifySpA(spa, pokemon) {
-				if (pokemon.abilityState.stacks <= 0) return;
-				let boost = 1 + 0.1 * pokemon.abilityState.stacks;
+				if (pokemon.stacks <= 0) return;
+				let boost = 1 + 0.1 * pokemon.stacks;
 				return this.chainModify(boost);
 			},
 			onModifySpe(spe, pokemon) {
-				if (pokemon.abilityState.stacks <= 0) return;
-				let boost = 1 + 0.1 * pokemon.abilityState.stacks;
+				if (pokemon.stacks <= 0) return;
+				let boost = 1 + 0.1 * pokemon.stacks;
 				return this.chainModify(boost);
 			},
 			onTryHeal(damage, target, source, effect) {
@@ -1780,9 +1464,9 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				// Prevent charge from wearing off immediately after Turbocharge is used
 				// It should start at X stacks and should not begin to deplete until one
 				// full turn cycle has passed.
-				if (this.effectState.turnUsed !== this.turn) pokemon.abilityState.stacks--;
-				if (pokemon.abilityState.stacks <= 0) {
-					pokemon.abilityState.stacks = 0;
+				if (this.effectState.turnUsed !== this.turn) pokemon.stacks--;
+				if (pokemon.stacks <= 0) {
+					pokemon.stacks = 0;
 					this.add('-message', `${pokemon.name}'s turbocharge wore off!`);
 					pokemon.removeVolatile('turbocharge');
 					return;
@@ -1791,7 +1475,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				this.add('-message', `${pokemon.name} is turbocharged!`);
 			},
 			onSwitchOut(pokemon) {
-				pokemon.abilityState.stacks = 0;
+				pokemon.stacks = 0;
 				pokemon.removeVolatile('turbocharge');
 			},
 		},
@@ -1907,283 +1591,6 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		target: "normal",
 		type: "Water",
 	},
-	// Faust
-	thehousealwayswins: {
-		name: "The House Always Wins",
-		category: "Physical",
-		basePower: 60,
-		accuracy: 100,
-		pp: 1,
-		priority: 1,
-		flags: { bypasssub: 1 },
-		target: "normal",
-		type: "Dark",
-		isZ: "crossroadsblues",
-		stealsBoosts: true,
-		onTryMove() {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source) {
-			this.add('-anim', source, 'Spectral Thief', source);
-		},
-		basePowerCallback(pokemon, target, move) {
-			const bp = move.basePower + (20 * pokemon.positiveBoosts());
-			this.debug('BP: ' + bp);
-			return bp;
-		},
-		onHit(target, source, move) {
-			source.clearBoosts();
-			source.abilityState.wagerStacks = 0;
-			this.heal(source.baseMaxhp, source);
-			changeSet(this, source, ssbSets['Croupier'], true);
-		},
-	},
-	// Faust
-	faustianbargain: {
-		name: "Faustian Bargain",
-		category: "Status",
-		accuracy: 100,
-		basePower: 0,
-		pp: 8,
-		noPPBoosts: true,
-		priority: 1,
-		flags: { protect: 1, reflectable: 1, mirror: 1 },
-		target: "normal",
-		type: "Dark",
-		onTryMove() {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source) {
-			this.add('-anim', source, 'Hex', source);
-			this.add('-anim', source, 'Coaching', source);
-		},
-		onHit(target, source, move) {
-
-			let stat: BoostID;
-			const myRoll = this.random(3, 18);
-			const yourRoll = this.random(2, 12);
-			this.add('-message', `${source.name} rolled a ${myRoll}!`);
-			this.add('-message', `${target.name} rolled a ${yourRoll}!`);
-
-			for (stat in source.boosts) {
-				if (stat === 'accuracy' || stat === 'evasion') continue;
-				if (source.boosts[stat] <= 0) {
-					let boost: SparseBoostsTable = {};
-					boost[stat] = 1 - source.boosts[stat];
-					this.boost(boost, source);
-				}
-			}
-
-			if (myRoll > yourRoll) {
-				for (stat in source.boosts) {
-					if (source.boosts[stat] > 0) {
-						let boost: SparseBoostsTable = {};
-						boost[stat] = source.boosts[stat];
-						this.boost(boost, source);
-					}
-				}
-				this.damage(target.hp / 2, target);
-
-			} else {
-				for (stat in source.boosts) {
-					if (source.boosts[stat] > 0) {
-						let boost: SparseBoostsTable = {};
-						boost[stat] = source.boosts[stat];
-						this.boost(boost, target);
-					}
-				}
-				source.clearBoosts();
-				this.add('-copyboost', target, source, '[from] move: Faustian Bargain');
-			}
-		},
-	},
-	// Faust
-	kniffel: {
-		name: "Kniffel",
-		category: "Physical",
-		accuracy: 100,
-		basePower: 40,
-		pp: 64,
-		noPPBoosts: true,
-		priority: 0,
-		flags: { protect: 1 },
-		target: "normal",
-		type: "Dark",
-		ignoreImmunity: true,
-		ignoreDefensive: true,
-		onTryMove() {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source) {
-			this.add('-anim', source, 'Coaching', source);
-		},
-		onModifyMove(move, pokemon) {
-			let rollCount = 0;
-			for (let total = 0; total < 6; total++) {
-				total--;
-				let roll = this.random(1, 6);
-				this.add('-anim', pokemon, 'Wish', pokemon);
-				this.add('-message', `${source.name} rolled a ${roll}!`);
-				total += roll;
-				rollCount++;
-			}
-			move.multihit = rollCount;
-		},
-		onEffectiveness() {
-			return 0;
-		},
-	},
-	// Croupier
-	allin: {
-		name: "All In",
-		category: "Special",
-		accuracy: 100,
-		basePower: 1,
-		pp: 1,
-		priority: 0,
-		flags: {},
-		target: "normal",
-		type: "Ghost",
-		isZ: "staufensdie",
-		onTryMove() {
-			this.attrLastMove('[still]');
-		},
-		basePowerCallback(pokemon, target, move) {
-			this.add('-anim', pokemon, 'Celebrate', pokemon);
-			this.add('-anim', pokemon, 'Pay Day', pokemon);
-			this.add('-anim', target, 'Pay Day', target);
-
-			const myRoll = this.random(3, 18);
-			const yourRoll = this.random(3, 18);
-
-			this.add('-message', `${pokemon.name} rolled a ${myRoll}!`);
-			this.add('-message', `${target.name} rolled a ${yourRoll}!`);
-
-			if (myRoll >= yourRoll) {
-				this.add('-message', `Better luck next time!`);
-				pokemon.abilityState.wagerStacks *= 3;
-				if (pokemon.abilityState.wagerStacks > 18) pokemon.abilityState.wagerStacks = 18;
-				this.add('-anim', pokemon, 'Celebrate', pokemon);
-				this.add('-anim', pokemon, 'Shadow Ball', target);
-				this.effectState.forcingSwitch = true;
-				return 120;
-			} else {
-				this.add('-message', `Can't win 'em all!`);
-				this.add('-anim', pokemon, 'Splash', pokemon);
-				for (let i = 0; i < pokemon.abilityState.wagerStacks; i++) {
-					const stats: BoostID[] = [];
-					let stat: BoostID;
-					for (stat in target.boosts) {
-						if (target.boosts[stat] < 6) {
-							stats.push(stat);
-						}
-					}
-					if (stats.length) {
-						const randomStat = this.sample(stats);
-						const boost: SparseBoostsTable = {};
-						boost[randomStat] = 2;
-						this.boost(boost, target);
-					}
-				}
-				this.add('-message', `${target.name} received ${pokemon.abilityState.wagerStacks} boosts for each of ${pokemon.name}'s ${pokemon.abilityState.wagerStacks} wager stacks!`);
-				this.add('-message', `${pokemon.name} lost their wager!`);
-				pokemon.abilityState.wagerStacks = 0;
-				return 0;
-			}
-		},
-		onHit(target, source, move) {
-			if (this.effectState.forcingSwitch) target.forceSwitchFlag = true;
-		},
-	},
-	// Croupier
-	rollthedice: {
-		name: "Roll the Dice",
-		category: "Special",
-		accuracy: 100,
-		basePower: 1,
-		pp: 64,
-		noPPBoosts: true,
-		priority: 0,
-		flags: {},
-		target: "normal",
-		type: "Ghost",
-		ignoreImmunity: true,
-		onTryMove() {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source) {
-			this.add('-anim', source, 'Wish', source);
-			this.add('-anim', source, 'Celebrate', source);
-		},
-		basePowerCallback(pokemon, target, move) {
-			const roll = this.random(1, 6);
-			this.add('-message', `${pokemon.name} rolled a ${roll}!`);
-			this.add('-message', `${pokemon.name} scored ${roll} wager stacks!`);
-			pokemon.abilityState.wagerStacks += roll;
-			switch (roll) {
-				case 1:
-					const stats: BoostID[] = [];
-					let stat: BoostID;
-					for (stat in target.boosts) {
-						if (target.boosts[stat] < 6) {
-							stats.push(stat);
-						}
-					}
-					if (stats.length) {
-						const randomStat = this.sample(stats);
-						const boost: SparseBoostsTable = {};
-						boost[randomStat] = 1;
-						this.boost(boost, target);
-					}
-					return 1;
-				case 2:
-					return 40;
-				case 3:
-					return 60;
-				case 4:
-					return 80;
-				case 5:
-					return 100;
-				case 6:
-					pokemon.abilityState.wagerStacks = 0;
-					this.heal(pokemon.baseMaxhp, pokemon);
-					this.boost({ atk: 1, def: 1, spa: 1, spd: 1, spe: 1 }, pokemon);
-					pokemon.abilityState.luckySix = true;
-					changeSet(this, pokemon, ssbSets['Faust'], true);
-					return 80;
-			}
-		},
-		onEffectiveness() {
-			return 0;
-		},
-	},
-	// Croupier
-	tapout: {
-		name: "Tap Out",
-		category: "Status",
-		accuracy: 100,
-		basePower: 0,
-		pp: 16,
-		noPPBoosts: true,
-		priority: 0,
-		flags: { reflectable: 1, protect: 1 },
-		target: "normal",
-		type: "Ghost",
-		selfSwitch: true,
-		ignoreImmunity: true,
-		onTryMove() {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source) {
-			this.add('-anim', source, 'Belly Drum', source);
-		},
-		onHit(target, source, move) {
-			source.abilityState.wagerStacks++;
-			this.add('-message', `${source.name} saved a wager stack!`);
-			target.addVolatile('taunt');
-			target.addVolatile('torment');
-		},
-	},
 	// Flufi
 	ripapart: {
 		name: "Rip Apart",
@@ -2257,17 +1664,17 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		onPrepareHit(target, source, move) {
 			this.add('-anim', source, 'Hurricane', source);
 			this.add('-anim', source, 'Thunder', target);
-			if (!source.abilityState.static) {
+			if (!source.static) {
 				this.debug('insufficient charge for big thunder');
 				return false;
 			}
 		},
 		onHit(target, source, move) {
 			target.side.addSideCondition('bigthunder');
-			target.side.sideConditions['bigthunder'].duration = source.abilityState.static;
+			target.side.sideConditions['bigthunder'].duration = source.static;
 			target.side.sideConditions['bigthunder'].source = source;
 			target.side.sideConditions['bigthunder'].move = move;
-			source.abilityState.static = null;
+			source.static = null;
 		},
 		condition: {
 			onResidual(pokemon) {
@@ -2304,13 +1711,13 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		},
 		onPrepareHit(target, source) {
 			if (!this.field.isTerrain("electricterrain") ||
-			!source.abilityState.gauges) return null;
+			!source.gauges) return null;
 
 			this.add('-anim', source, 'Parabolic Charge', source);
 			this.add('-anim', source, 'Electro Shot', target);
 		},
 		onHit(source) {
-			source.abilityState.gauges = 0;
+			source.gauges = 0;
 			let newAbility = this.dex.abilities.get('electromorphosis');
 			const abilitySet = source.setAbility(newAbility);
 			if (abilitySet) {
@@ -2322,55 +1729,6 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		secondary: null,
 		target: "normal",
 		type: "Electric",
-	},
-	// Morte
-	omenofdefeat: {
-		accuracy: 100,
-		basePower: 150,
-		category: "Physical",
-		name: "Omen of Defeat",
-		shortDesc: "Endures, then hits after opponent. Mimikyu: Transforms.",
-		pp: 16,
-		noPPBoosts: true,
-		priority: -8,
-		flags: { contact: 1, protect: 1 },
-		onTryMove() {
-			this.attrLastMove('[still]');
-		},
-		onPrepareHit(target, source) {
-			this.add('-anim', source, 'Hex', source);
-			this.add('-anim', source, 'Spectral Thief', target);
-		},
-		priorityChargeCallback(pokemon) {
-			if (pokemon.species.id !== 'mimikyubusted') pokemon.addVolatile('omenofdefeat');
-		},
-		condition: {
-			duration: 1,
-			onStart(pokemon) {
-				this.add('-singleturn', pokemon, 'move: Omen of Defeat');
-				this.add('-anim', pokemon, 'Confuse Ray', pokemon);
-				this.add('-message', `${pokemon.name} prepared for defeat!`);
-			},
-			onDamage(damage, target, source, effect) {
-				if (effect?.effectType === 'Move' && damage >= target.hp) {
-					this.add('-activate', target, 'move: Omen of Defeat');
-					return target.hp - 1;
-				}
-			},
-			onEnd(pokemon) {
-				if (pokemon.species.id === 'mimikyu') {
-					const targetSide = pokemon.side.foe.active[0].side;
-					pokemon.formeChange('Mimikyu-Busted');
-					pokemon.abilityState.dollDur = 3;
-					pokemon.hp = pokemon.baseMaxhp;
-					this.add('-heal', pokemon, pokemon.getHealth, '[silent]');
-					targetSide.addSideCondition('Cursed Doll', pokemon);
-				}
-			},
-		},
-		secondary: null,
-		target: "normal",
-		type: "Ghost",
 	},
 	// Marisa Kirisame
 	orbshield: {
@@ -2395,7 +1753,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			duration: 1,
 			onStart(target, source, effect) {
 				this.add('-start', target, 'Orb Shield');
-				target.abilityState.orbHp = Math.floor(target.maxhp / 4);
+				target.orbHp = Math.floor(target.maxhp / 4);
 				if (target.volatiles['partiallytrapped']) {
 					this.add('-end', target, target.volatiles['partiallytrapped'].sourceEffect, '[partiallytrapped]', '[silent]');
 					delete target.volatiles['partiallytrapped'];
@@ -2403,18 +1761,18 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			},
 			onTryPrimaryHitPriority: -1,
 			onTryPrimaryHit(target, source, move) {
-				if (target === source || move.flags['bypasssub'] || move.infiltrates || !target.abilityState.orbHp) return;
+				if (target === source || move.flags['bypasssub'] || move.infiltrates || !target.orbHp) return;
 				// @ts-ignore
 				const damage = this.actions.getDamage(source, target, move);
 				if (!damage) {
 					this.add('-message', `${target.name} was protected by Orb Shield!`);
 					return null;
 				}
-				if (damage < target.abilityState.orbHp) {
-					target.abilityState.orbHp -= damage;
+				if (damage < target.orbHp) {
+					target.orbHp -= damage;
 					this.add('-activate', target, 'move: Orb Shield', '[damage]');
-				} else if (damage >= target.abilityState.orbHp) {
-					target.abilityState.orbHp = 0;
+				} else if (damage >= target.orbHp) {
+					target.orbHp = 0;
 					target.removeVolatile('orbshield');
 					this.add('-message', `${target.name}'s Orb Shield broke!`);
 				}
@@ -2424,9 +1782,9 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			},
 			onEnd(pokemon) {
 				const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
-				if (pokemon.abilityState.orbHp) this.damage(80, target, pokemon);
+				if (pokemon.orbHp) this.damage(80, target, pokemon);
 				this.add('-end', pokemon, 'Orb Shield');
-				pokemon.abilityState.orbHp = 0;
+				pokemon.orbHp = 0;
 			},
 		},
 		secondary: null,
@@ -2558,11 +1916,11 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				this.add('-ability', target, 'Normalize', '[from] move: You Filthy Peasant');
 			}
 			this.add('-start', target, 'typechange', 'Normal');
-			pokemon.abilityState.turnLastUsed = this.turn;
+			pokemon.turnLastUsed = this.turn;
 			return oldAbility as false | null;
 		},
 		onDisableMove(pokemon) {
-			if (this.turn - pokemon.abilityState.turnLastUsed < 5) pokemon.disableMove('youfilthypeasant');
+			if (this.turn - pokemon.turnLastUsed < 5) pokemon.disableMove('youfilthypeasant');
 		},
 		secondary: null,
 		target: "normal",
@@ -2619,13 +1977,13 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			this.add('-anim', source, 'Splash', source);
 		},
 		onHit(pokemon) {
-			if (!pokemon.abilityState.enhancement) pokemon.abilityState.enhancement = 0;
-			if (pokemon.abilityState.enhancement >= 3) {
+			if (!pokemon.enhancement) pokemon.enhancement = 0;
+			if (pokemon.enhancement >= 3) {
 				this.add('-message', `${pokemon.name}'s weapon is already at maximum enhancement!`);
 				return;
 			}
-			if (pokemon.abilityState.enhancement < 3) {
-				pokemon.abilityState.enhancement += 1;
+			if (pokemon.enhancement < 3) {
+				pokemon.enhancement += 1;
 				this.add('-message', `${pokemon.name} is strengthening their weapon!`);
 			}
 		},
@@ -2849,12 +2207,12 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			this.add('-message', `${source.name} tossed the Inconspicuous Coin at ${target.name}!`);
 			this.damage(target.maxhp / this.random(6, 10), target, source);
 			source.addVolatile('coinclash');
-			source.abilityState.recallActive = true;
+			source.recallActive = true;
 			if (this.randomChance(1, 2)) {
 				this.add('-message', `Hey! The coin landed on heads!`);
 				this.add('-message', `${source.name} is fired up!`);
 				this.heal(source.maxhp / this.random(4, 8));
-				source.abilityState.firedUp = true;
+				source.firedUp = true;
 			}
 		},
 		condition: {
@@ -2871,7 +2229,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				if (pokemon.item || pokemon.name !== 'Gizmo') return;
 				pokemon.setItem('inconspicuouscoin');
 				this.add('-item', pokemon, pokemon.getItem(), '[from] item: Inconspicuous Coin');
-				pokemon.abilityState.recallActive = false;
+				pokemon.recallActive = false;
 			},
 		},
 		multihit: [3, 5],
@@ -2891,7 +2249,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		flags: { protect: 1 },
 		onTryMove(pokemon, target, move) {
 			this.attrLastMove('[still]');
-			if (!pokemon.abilityState.coins) {
+			if (!pokemon.coins) {
 				this.add('-message', `${pokemon.name} used Capital Cannon...`)
 				this.add('-anim', pokemon, 'Splash', pokemon);
 				this.add('-message', `...but couldn't shoot from an empty cannon!`);
@@ -2899,72 +2257,28 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			}
 		},
 		onPrepareHit(target, source) {
-			if (!source.abilityState.coins) return;
+			if (!source.coins) return;
 			this.add('-anim', source, 'Taunt', target);
 			this.add('-anim', source, 'Steel Beam', target);
 		},
 		basePowerCallback(pokemon, target, move) {
-			if (!pokemon.abilityState.coins) return;
-			if (pokemon.abilityState.coins > 10) {
+			if (!pokemon.coins) return;
+			if (pokemon.coins > 10) {
 				// Capital Cannon only uses up to 10 coins at a time
 				return 200;
 			} else {
-				return 20 * pokemon.abilityState.coins;
+				return 20 * pokemon.coins;
 			}
 		},
 		onEffectiveness(typeMod, target, type) {
 			return 0;
 		},
 		onHit(target, source, move) {
-			if (source.abilityState.coins > 10) {
-				source.abilityState.coins -= 10;
+			if (source.coins > 10) {
+				source.coins -= 10;
 			} else {
-				source.abilityState.coins = 0;
+				source.coins = 0;
 			}
-		},
-		secondary: null,
-		target: "normal",
-		type: "Steel",
-	},
-	// Glint
-	gigameld: {
-		accuracy: true,
-		basePower: 65,
-		category: "Physical",
-		name: "GigaMeld",
-		pp: 5,
-		noPPBoosts: true,
-		flags: { contact: 1, protect: 1 },
-		ignoreImmunity: true,
-		priorityChargeCallback(pokemon) {
-			pokemon.addVolatile('gigameld');
-		},
-		onPrepareHit(target, source) {
-			this.add('-anim', pokemon, 'Swagger', target);
-			this.add('-anim', pokemon, 'Flame Charge', target);
-		},
-		onHit(target, source, move) {
-			const lstats = ['atk', 'def', 'spa', 'spd', 'spe'];
-			const rstats = ['atk', 'def', 'spd', 'spe'];
-			const loweredStat = this.sample(lstats);
-			const raisedStat = this.sample(rstats);
-
-			if (!source.addType(target.getTypes()[0])) return false;
-			if (!target.addType('Steel')) return false;
-			this.add('-start', target, 'typeadd', 'Steel', '[from] move: GigaMeld');
-			this.add('-start', source, 'typeadd', target.getTypes()[0], '[from] move: GigaMeld');
-			target.storedStats[loweredStat] -= 50;
-			source.storedStats[raisedStat] += 50;
-			this.add('-message', `${target.name}'s ${loweredStat.toUpperCase()} was decreased to ${target.storedStats[loweredStat]} by ${move.name}!`);
-			this.add('-message', `${source.name}'s ${raisedStat.toUpperCase()} was increased to ${source.storedStats[raisedStat]} by ${move.name}!`);
-		},
-		condition: {
-			duration: 1,
-			onStart(pokemon) {
-				this.add('-singleturn', pokemon, 'move: GigaMeld');
-				this.add('-anim', pokemon, 'Work Up', pokemon);
-				this.add('-message', `${pokemon.name} is preparing to meld!`);
-			},
 		},
 		secondary: null,
 		target: "normal",
@@ -3350,7 +2664,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		accuracy: true,
 		basePower: 0,
 		category: "Status",
-		shortDdesc: "Damages foe every turn until switch/faint.",
+		shortDesc: "Damages foe every turn until switch/faint.",
 		desc: "Damages the foe using Defense stat in calculation at the end of every turn until that Pokemon faints or another Pokemon is affected by this move.",
 		name: "Shikigami Ran",
 		pp: 40,
@@ -3365,10 +2679,10 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		},
 		onHit(target, source, move) {
 			for (const foe of target.side.pokemon) {
-				if (foe.abilityState.ran) foe.abilityState.ran = false;
+				if (foe.ran) foe.ran = false;
 			}
 			target.addVolatile('shikigamiran');
-			target.abilityState.ran = true;
+			target.ran = true;
 		},
 		condition: {
 			onResidual(pokemon) {

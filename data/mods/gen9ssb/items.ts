@@ -210,22 +210,22 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		},
 		onTryHit(pokemon, source, move) {
 			if (move.category === 'Special' && pokemon !== source) {
-				if (!pokemon.abilityState.sack) pokemon.abilityState.sack = [];
-				if (pokemon.abilityState.sack.length >= 1) return;
+				if (!pokemon.sack) pokemon.sack = [];
+				if (pokemon.sack.length >= 1) return;
 				this.add('-anim', pokemon, 'Present', pokemon);
 				this.add('-anim', pokemon, 'Tickle', pokemon);
 				this.add('-activate', pokemon, 'item: Gift Sack', move.name);
 				this.add('-message', `${pokemon.name} stored ${move.name} in its Gift Sack!`);
-				pokemon.abilityState.sack.push(move.name);
+				pokemon.sack.push(move.name);
 				return null;
 			}
 		},
 		onBasePowerPriority: 15,
 		onBasePower(basePower, user, target, move) {
-			if (!user.abilityState.sack) return;
-			if (user.abilityState.sack.length && move.id === 'giftoffortune') {
+			if (!user.sack) return;
+			if (user.sack.length && move.id === 'giftoffortune') {
 				this.add('-message', `${user.name}'s Gift Sack amplified ${move.name}'s power!`);
-				return this.chainModify(1 + 0.5 * user.abilityState.sack.length);
+				return this.chainModify(1 + 0.5 * user.sack.length);
 			}
 		},
 	},
@@ -370,20 +370,20 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		shortDesc: "User can hold 8 items; New item each turn.",
 		desc: "The holder can hold up to eight additional items, other than Colossus Carrier, that are unaffected by Knock Off or other means of being taken, disabled, or removed. Colossus Carrier itself also cannot be taken, disabled, or removed. At the end of each turn, the holder picks up a random item that it isn't already holding.",
 		onResidual(pokemon) {
-			if (!pokemon.abilityState.carrierItems) pokemon.abilityState.carrierItems = [];
+			if (!pokemon.carrierItems) pokemon.carrierItems = [];
 			const items = this.dex.items.all().filter(item => (
 				pokemon.item !== item &&
-				!pokemon.abilityState.carrierItems.includes(item) &&
+				!pokemon.carrierItems.includes(item) &&
 				!item.name.includes('TR') && !item.itemUser &&
 				!item.name.includes('Power') && !item.isPokeball &&
 				!item.megaStone && !item.unusable
 			));
 			const item = this.sample(items);
-			if (pokemon.abilityState.carrierItems.length < 8 && pokemon.item === 'colossuscarrier') {
-				pokemon.abilityState.carrierItems.push(item);
+			if (pokemon.carrierItems.length < 8 && pokemon.item === 'colossuscarrier') {
+				pokemon.carrierItems.push(item);
 				this.add('-anim', pokemon, 'Splash', pokemon);
 				this.add('-message', `${pokemon.name} found one ${item.name}!`);
-			} else if (pokemon.abilityState.carrierItems.length >= 8 || !pokemon.item || pokemon.item !== 'colossuscarrier') {
+			} else if (pokemon.carrierItems.length >= 8 || !pokemon.item || pokemon.item !== 'colossuscarrier') {
 				this.add('-anim', pokemon, 'Celebrate', pokemon);
 				this.add('-message', `${pokemon.name} found one ${item.name}, but has no more capacity for items!`);
 			}
@@ -439,34 +439,34 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		name: "Absorptive Shell",
 		gen: 9,
 		onSwitchIn(pokemon) {
-			pokemon.abilityState.newType = '';
-			pokemon.abilityState.forcefield = false;
-			pokemon.abilityState.forcefieldHp = 0;
+			pokemon.newType = '';
+			pokemon.forcefield = false;
+			pokemon.forcefieldHp = 0;
 			if (pokemon.hp <= pokemon.maxhp / 2) {
 				this.add('-anim', pokemon, 'Aqua Ring', pokemon);
 				this.add('-message', `${pokemon.name} created a forcefield!`);
-				pokemon.abilityState.forcefield = true;
-				pokemon.abilityState.forcefieldHp = pokemon.maxhp / 3;
+				pokemon.forcefield = true;
+				pokemon.forcefieldHp = pokemon.maxhp / 3;
 			}
 		},
 		onDamage(damage, target, source, effect) {
 			if (effect?.effectType !== 'Move' || source === target) return;
-			if (target.abilityState.forcefield && target.abilityState.forcefieldHp > 0) {
+			if (target.forcefield && target.forcefieldHp > 0) {
 				this.add('-anim', target, 'Aqua Ring', target);
-				if (target.abilityState.forcefieldHp >= damage) {
-					target.abilityState.forcefieldHp -= damage;
-					if (target.abilityState.forcefieldHp <= 0) {
-						target.abilityState.forcefield = false;
-						target.abilityState.forcefieldHp = 0;
+				if (target.forcefieldHp >= damage) {
+					target.forcefieldHp -= damage;
+					if (target.forcefieldHp <= 0) {
+						target.forcefield = false;
+						target.forcefieldHp = 0;
 						this.add('-anim', target, 'Cosmic Power', target);
 						this.add('-message', `${target.name}'s forcefield shattered!`);
 					}
 					return 0;
 				}
-				if (damage > target.abilityState.forcefieldHp) {
-					let bleed = damage - target.abilityState.forcefieldHp;
-					target.abilityState.forcefield = false;
-					target.abilityState.forcefieldHp = 0;
+				if (damage > target.forcefieldHp) {
+					let bleed = damage - target.forcefieldHp;
+					target.forcefield = false;
+					target.forcefieldHp = 0;
 					this.add('-anim', target, 'Cosmic Power', target);
 					this.add('-message', `${target.name}'s forcefield shattered!`);
 					return bleed;
@@ -476,15 +476,15 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		onResidual(pokemon) {
 			let types = ['Bug', 'Dark', 'Dragon', 'Electric', 'Fairy', 'Fighting', 'Fire', 'Flying', 'Ghost', 'Grass', 'Ground', 'Ice', 'Normal', 'Poison', 'Psychic', 'Rock', 'Water'];
 			let newType = this.sample(types);
-			pokemon.abilityState.newType = newType;
+			pokemon.newType = newType;
 			pokemon.setType([newType, 'Steel']);
 			this.add('-start', pokemon, 'typechange', pokemon.getTypes(true).join('/'), '[from] item: Absorptive Shell');
 		},
 		onModifyMove(move, pokemon) {
 			if (move.id !== 'technoblast') return;
-			if (pokemon.abilityState.newType) {
-				move.type = pokemon.abilityState.newType;
-				this.add('-message', `${pokemon.getItem().name} changed ${move.name} to ${pokemon.abilityState.newType}-type!`);
+			if (pokemon.newType) {
+				move.type = pokemon.newType;
+				this.add('-message', `${pokemon.getItem().name} changed ${move.name} to ${pokemon.newType}-type!`);
 			} else {
 				move.type = 'Steel';
 				this.add('-message', `${pokemon.getItem().name} changed ${move.name} to Steel-type!`);
@@ -573,28 +573,28 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		name: 'Staufen\'s Die',
 		gen: 9,
 		onStart(pokemon) {
-			if (!pokemon.abilityState.wagerStacks) pokemon.abilityState.wagerStacks = 0;
+			if (!pokemon.wagerStacks) pokemon.wagerStacks = 0;
 		},
 		onModifyDamage(damage, source, target, move) {
 			if (target.getMoveHitData(move).crit) {
 				this.add("-activate", source, "item: Staufen's Die");
 				this.addMove('-anim', source, 'Pay Day', source);
 				this.add('-message', `Critical hit! ${source.name} scored six wager stacks!`);
-				if (!source.abilityState.wagerStacks) source.abilityState.wagerStacks = 0;
-				source.abilityState.wagerStacks += 6;
+				if (!source.wagerStacks) source.wagerStacks = 0;
+				source.wagerStacks += 6;
 				return;
 			}
 		},
 		onResidual(pokemon) {
-			if (pokemon.abilityState.wagerStacks >= 6) {
-				pokemon.abilityState.wagerStacks -= 6;
+			if (pokemon.wagerStacks >= 6) {
+				pokemon.wagerStacks -= 6;
 				this.add("-activate", pokemon, "item: Staufen's Die");
 				this.add('-message', `${pokemon.name} wagered six stacks to Roll the Dice!`);
 				this.actions.useMove('Roll the Dice', pokemon);
 			}
 		},
 		onModifyCritRatio(critRatio, user) {
-			if (user.abilityState.luckySix) return critRatio + 5;
+			if (user.luckySix) return critRatio + 5;
 		},
 		onTakeItem: false,
 		zMove: "All In",
@@ -658,12 +658,12 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 			if (move.id === 'technoblast' || move.id === 'energyball') move.basePower *= 1.3;
 		},
 		onResidual(pokemon) {
-			if (pokemon.abilityState.gauges >= 0 && pokemon.abilityState.gauges < 5) {
-				pokemon.abilityState.gauges += 1;
+			if (pokemon.gauges >= 0 && pokemon.gauges < 5) {
+				pokemon.gauges += 1;
 				this.add('-anim', pokemon, 'Charge');
-				this.add(`raw|${pokemon.name} is gaining charge! <b>(${pokemon.abilityState.gauges}/5)</b>`);
+				this.add(`raw|${pokemon.name} is gaining charge! <b>(${pokemon.gauges}/5)</b>`);
 			}
-			if (pokemon.abilityState.gauges === 5) {
+			if (pokemon.gauges === 5) {
 				this.add('-anim', pokemon, 'Discharge');
 				this.add('-anim', pokemon, 'Celebrate');
 				this.add('-message', `${pokemon.name} is brimming with charge!`);
@@ -796,16 +796,16 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		shortDesc: "See '/ssb Gizmo' for more!",
 		gen: 9,
 		onSourceModifyDamage(damage, source, target, move) {
-			if (!target.abilityState.charges) target.abilityState.charges = 0;
-			const chance = 5 / (1 + target.abilityState.charges);
+			if (!target.charges) target.charges = 0;
+			const chance = 5 / (1 + target.charges);
 			if (this.randomChance(1, chance)) {
 				this.add('-message', `${target.name} defended itself with the Inconspicuous Coin!`);
 				return this.chainModify(0.5);
 			}
 		},
 		onModifyDamage(damage, source, target, move) {
-			if (!source.abilityState.charges || source.abilityState.charges === 0) return;
-			const chance = 5 / (1 + source.abilityState.charges);
+			if (!source.charges || source.charges === 0) return;
+			const chance = 5 / (1 + source.charges);
 			if (this.randomChance(1, chance) && move.basePower <= 60) {
 				this.add('-message', `${source.name} used the Inconspicuous Coin's charge to strengthen ${move.name}'s impact!`);
 				return this.chainModify(2);
@@ -909,13 +909,13 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 				this.add("-activate", target, "item: Fleeting Winds");
 				this.actions.useMove('Healing Wish', target);
 				target.side.addSideCondition('tailwind', target);
-				target.abilityState.faintOnUpdate = true;
+				target.faintOnUpdate = true;
 				return target.hp - 1;
 			}
 		},
 		onUpdate(pokemon) {
-			if (pokemon.abilityState.faintOnUpdate) {
-				pokemon.abilityState.faintOnUpdate = false;
+			if (pokemon.faintOnUpdate) {
+				pokemon.faintOnUpdate = false;
 				pokemon.faint();
 			}
 		},
