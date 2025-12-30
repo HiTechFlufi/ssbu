@@ -1333,6 +1333,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			this.add('-message', `${target.name} scrambled away from danger!`);
 			this.add('-anim', target, 'Dive', target);
 			target.switchFlag = true;
+			this.add('-message', `${target.name} switch count: ${target.abilityState.switches}`);
 			return damage / 5;
 		},
 	},
