@@ -1324,16 +1324,16 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		shortDesc: "Takes 1/5 damage from attacks, then switches to ally of choice.",
 		onDamagePriority: 1,
 		onDamage(damage, target, source, effect) {
-			if (!target.abilityState.switches) target.abilityState.switches = 0;
-			if (target === source || !damage ||
-				effect.effectType !== 'Move' || target.abilityState.switches >= 3 ||
-				target.side.totalFainted >= 5) return;
-			target.abilityState.switches++;
+			if (!target.switchCount) target.switchCount = 0;
+			if (target === source || !damage || effect.effectType !== 'Move' ||
+			target.switchCount >= 3 || target.side.totalFainted >= 5) return;
+
+			target.switchCount++;
 			this.add('-activate', target, 'ability: Lost and Found');
-			this.add('-message', `${target.name} scrambled away from danger!`);
 			this.add('-anim', target, 'Dive', target);
+			this.add('-message', `${target.name} scrambled away from danger!`);
 			target.switchFlag = true;
-			this.add('-message', `${target.name} switch count: ${target.abilityState.switches}`);
+			this.add('-message', `${target.name} switch count: ${target.switchCount}`);
 			return damage / 5;
 		},
 	},

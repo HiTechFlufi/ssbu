@@ -66,6 +66,9 @@ export class Pokemon {
 	readonly baseMoveSlots: MoveSlot[];
 	moveSlots: MoveSlot[];
 
+	// Create and call custom value with "pokemon.(VALUE) = X"
+	[custom: string]: any;
+
 	hpType: string;
 	hpPower: number;
 
