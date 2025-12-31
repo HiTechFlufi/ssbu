@@ -82,6 +82,29 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 			this.add('-end', pokemon, 'Akasha Seeds', '[silent]');
 		},
 	},
+	//Prince Smurf
+	dynamicshiftshield: {
+		name: "Dynamic Shift",
+		duration: 1,
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Dynamic Shift');
+		},
+		onTryHit(target, source, move) {
+			if (!move || move.category === 'Status') return;
+
+			// Debuff attacker when they hit through the shield
+			if (move.category === 'Physical') {
+				this.boost({atk: -2}, source, target);
+			} else if (move.category === 'Special') {
+				this.boost({spa: -2}, source, target);
+			}
+
+			this.add('-anim', target, 'Reflect', target);
+		},
+		onEnd(pokemon) {
+			this.add('-end', pokemon, 'Dynamic Shift');
+		},
+	},	
 	// Kusanali
 	courtofdreams: {
 		name: "Court of Dreams",
