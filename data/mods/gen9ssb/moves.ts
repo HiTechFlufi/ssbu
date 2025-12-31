@@ -1697,38 +1697,55 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 	},
 	// Cyclommatic Cell
 	parabolicdischarge: {
-		accuracy: true,
-		basePower: 150,
-		category: "Special",
 		name: "Parabolic Discharge",
-		desc: "Fails if Electric Terrain is not active. Ends Electric Terrain. Changes the user's ability to Electromorphosis.",
-		shortDesc: "Must be used in Electric Terrain; User gains Electromorphosis.",
+		category: "Special",
+		gen: 9,
+		desc: "Fails unless Electric Terrain is active. After dealing damage, Electric Terrain ends. Drains the user's Battery Life to 0 and changes its ability to Electromorphosis.",
+		shortDesc: "Only in Electric Terrain. Ends Terrain. Gauges -> 0. Becomes Electromorphosis.",
+		basePower: 150,
+		accuracy: true,
 		pp: 5,
 		priority: 0,
-		flags: { protect: 1, reflectable: 1, mirror: 1, metronome: 1 },
-		onTryMove() {
+		ignoreAbility: true,
+		flags: {protect: 1, metronome: 1},
+		type: "Electric",
+		target: "normal",
+		onTry(source, target, move) {
+			const field: any = this.field;
+			const isET = (field.isTerrain && field.isTerrain('electricterrain')) || field.terrain === 'electricterrain';
+			if (!isET) {
+				this.add('-fail', source, move, '[from] terrain');
+				return null;
+			}
+		},
+		onTryMove(target, source, move) {
 			this.attrLastMove('[still]');
 		},
-		onPrepareHit(target, source) {
-			if (!this.field.isTerrain("electricterrain") ||
-			!source.gauges) return null;
-
-			this.add('-anim', source, 'Parabolic Charge', source);
+		onPrepareHit(target, source, move) {
+			this.add('-anim', source, 'Parabolic Charge', target);
 			this.add('-anim', source, 'Electro Shot', target);
 		},
-		onHit(source) {
-			source.gauges = 0;
-			let newAbility = this.dex.abilities.get('electromorphosis');
-			const abilitySet = source.setAbility(newAbility);
-			if (abilitySet) {
-				this.add('-ability', source, source.getAbility().name, '[from] move: Parabolic Discharge', '[of] ' + source);
-				return;
+		onHit(target, source, move) {
+			// Drain gauges to 0
+			if (!source.gauges) (source as any).gauges = {};
+			(source.gauges as any).gauges = 0;
+			// End Electric Terrain immediately
+			const field: any = this.field;
+			if (field.clearTerrain) {
+				field.clearTerrain();
+			} else if (field.setTerrain) {
+				field.setTerrain('');
+			} else {
+				field.terrain = '';
 			}
-			return abilitySet as false | null;
+			this.add('-message', `The Electric Terrain shorted out!`);
+			// Become Electromorphosis
+			if (source.ability !== 'electromorphosis') {
+				source.setAbility('electromorphosis', source, move);
+				this.add('-ability', source, 'Electromorphosis', '[from] move: Parabolic Discharge');
+				this.add('-anim', source, 'Charge', source);
+			}
 		},
-		secondary: null,
-		target: "normal",
-		type: "Electric",
 	},
 	// Marisa Kirisame
 	orbshield: {
