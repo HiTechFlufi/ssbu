@@ -152,9 +152,9 @@ export const ssbSets: SSBSets = {
 	},
 	'Prince Smurf': {
 		species: 'Kecleon', ability: 'Quick Camo', item: 'Smurf\'s Crown', gender: 'M',
-		moves: ['Psyshield Bash', 'Drain Punch', 'Comeuppance'],
+		moves: ['Temper Flare', 'Retaliate', 'Drain Punch'],
 		signatureMove: 'You Filthy Peasant',
-		evs: { hp: 252, def: 196, spd: 60 }, nature: 'Careful',
+		evs: { hp: 252, atk: 252, spd: 4 }, nature: 'Brave',
 	},
 	Quetzalcoatl: {
 		species: 'Zapdos', ability: 'Peal of Thunder', item: 'Leftovers', gender: 'N',
