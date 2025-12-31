@@ -1439,104 +1439,79 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		name: "Spiriting Away",
 		gen: 9,
 	},
-	// Cylcommatic Cell
+	// Cyclommatic Cell
 	batterylife: {
 		name: "Battery Life",
 		gen: 9,
 		shortDesc: "Stores charge to power up Electric moves/Techno Blast.",
 		desc: "This Pokemon stores up to five gauges of charge, starting at five at the start of battle. This Pokemon uses charge gauges to power up Electric moves and Techno Blast. Opposing Electric moves heal the user for 1/4 max HP and increase charge gauges; Electric immunity. Sets Electric Terrain and must recharge if the user runs out of charge gauges. Electric moves and Techno Blast fail if the user does not have enough charge gauges stored.",
 		onStart(pokemon) {
-			if (pokemon.gauges === undefined) pokemon.gauges = 5;
+			if (pokemon.gauges == null) pokemon.gauges = 5;
 		},
 		onBasePower(basePower, attacker, defender, move) {
 			if (move.category === 'Status') return;
-			if (!attacker.gauges) attacker.gauges = 0;
-			switch (attacker.gauges) {
-				case 0:
-				case 1:
-					return this.chainModify(0.5);
-					break;
-				case 2:
-					return this.chainModify(0.75);
-					break;
-				case 3:
-					break;
-				case 4:
-					return this.chainModify(1.25);
-					break;
-				case 5:
-					return this.chainModify(1.5);
-					break;
-			}
+			let g: number = attacker.gauges;
+			if (g == null) g = attacker.gauges = 0;
+			if (g <= 1) return this.chainModify(0.5);
+			if (g === 2) return this.chainModify(0.75);
+			if (g === 4) return this.chainModify(1.25);
+			if (g >= 5) return this.chainModify(1.5);
+			// g === 3 => no modifier
 		},
 		onTryHit(target, source, move) {
 			if (target !== source && move.type === 'Electric') {
-				this.heal(target.baseMaxhp / 4);
+				this.heal(Math.floor(target.baseMaxhp / 4), target);
 				target.addVolatile('charge');
-				if (!target.gauges) target.gauges = 0;
-				target.gauges++;
+				if (target.gauges == null) target.gauges = 0;
+				if (target.gauges < 5) target.gauges++;
 				this.add('-message', `${target.name} was charged up by ${move.name}!`);
-				return null;
+				return null; // negates the hit
 			}
 		},
 		onBeforeMove(pokemon, target, move) {
-			// Use gauges for non-status electric moves
 			if (move.category === 'Status') return;
-			if (move.type === 'Electric') {
-				if (pokemon.gauges < 2) {
-					this.debug("Not enough battery");
-					this.add('-message', `${pokemon.name} doesn't have enough battery life to use ${move.name}!`);
-					this.add('-anim', pokemon, 'Tickle');
-					return false;
-				} else if (pokemon.gauges >= 2) {
-					pokemon.gauges -= 2;
-					this.add('-message', `${pokemon.name} used 40% of its battery life!`);
-				}
+			if (pokemon.gauges == null) pokemon.gauges = 0;
+			let cost = 0;
+			if (move.id === 'technoblast') cost = 3;
+			else if (move.type === 'Electric') cost = 2;
+			if (!cost) return;
+			if (pokemon.gauges < cost) {
+				this.add('-message', `${pokemon.name} doesn't have enough battery!`);
+				return false;
 			}
-			// Use gauges for techno blast
-			if (move.id === 'technoblast') {
-				if (pokemon.gauges < 3) {
-					this.debug("Not enough battery");
-					this.add('-message', `${pokemon.name} doesn't have enough battery life to use ${move.name}!`);
-					this.add('-anim', pokemon, 'Tickle');
-					return false;
-				} else if (pokemon.gauges >= 3) {
-					pokemon.gauges -= 3;
-					this.add('-message', `${pokemon.name} used 60% of its battery life!`);
-				}
-			}
+			pokemon.gauges -= cost;
+			this.add('-message', `${pokemon.name} used its battery to power up ${move.name}!`);
 		},
 		onResidual(pokemon) {
-			// Recharge if out of battery
+			if (pokemon.gauges == null) pokemon.gauges = 0;
+			// If out of battery: enter recharge mode (but don't spam every turn)
 			if (pokemon.gauges <= 0) {
-				this.add(`-anim`, pokemon, 'Tickle', pokemon);
+				this.add('-anim', pokemon, 'Tickle', pokemon);
 				this.add('-message', `${pokemon.name} is out of battery!`);
-				this.field.setTerrain('electricterrain');
-				pokemon.addVolatile('mustrecharge');
-				// Charge if at maximum battery
-			} else if (pokemon.gauges >= 5 && !pokemon.volatiles['charge']) {
-				this.add(`-anim`, pokemon, 'Charge', pokemon);
-				pokemon.addVolatile('charge');
-				this.add('-message', `${pokemon.name} is brimming with charge!`);
-				// Otherwise state charge amount
+				// Only set terrain / mustrecharge if not already active
+				if (!this.field.isTerrain('electricterrain')) {
+					this.field.setTerrain('electricterrain');
+				}
+				if (!pokemon.volatiles['mustrecharge']) {
+					pokemon.addVolatile('mustrecharge');
+				}
+			} else if (pokemon.gauges >= 5) {
+				this.add('-anim', pokemon, 'Charge', pokemon);
+				if (!pokemon.volatiles['charge']) pokemon.addVolatile('charge');
+				this.add('-message', `${pokemon.name} is at maximum charge!`);
 			} else {
-				this.add(`-anim`, pokemon, 'Charge', pokemon);
-				this.add('-message', `${pokemon.name} is at ${(pokemon.gauges / 5) * 100}% battery life!`);
+				this.add('-anim', pokemon, 'Charge', pokemon);
+				this.add('-message', `${pokemon.name} is at ${(pokemon.gauges / 5) * 100}% battery!`);
 			}
-			// Add charge from sleep or terrain
-			let totalCharge = 0;
-			if (pokemon.status === 'slp') totalCharge++;
-			if (this.field.isTerrain('electricterrain')) totalCharge++;
-			if (totalCharge > 0 && pokemon.gauges < 5) {
+			let gained = 0;
+			if (pokemon.status === 'slp') gained++;
+			if (this.field.isTerrain('electricterrain')) gained++;
+			if (gained && pokemon.gauges < 5) {
 				this.add('-activate', pokemon, 'ability: Battery Life');
-				pokemon.gauges += totalCharge;
-				if (pokemon.gauges > 5) pokemon.gauges = 5;
-				if (totalCharge === 1) {
-					this.add('-message', `${pokemon.name} is charging its battery!`);
-				}
-				if (totalCharge > 1) {
-					this.add('-message', `${pokemon.name} is charging up rapidly!`);
-				}
+				pokemon.gauges = Math.min(5, pokemon.gauges + gained);
+				this.add('-message',
+					gained === 1 ? `${pokemon.name} is charging up!` : `${pokemon.name} is charging rapidly!`
+				);
 			}
 		},
 	},
