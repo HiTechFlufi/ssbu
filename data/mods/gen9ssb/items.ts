@@ -646,27 +646,41 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		name: "Apparatus",
 		gen: 9,
 		shortDesc: "See '/ssb Cyclommatic Cell' for more!",
-		desc: "On switch-in, starts Ion Deluge and Magnet Rise for holder. Restores one gauge of battery life at end of each turn. Techno Blast: Steel-type, 1.3x power.",
+		desc: "On switch-in, holder becomes Electric and gains Magnet Rise. Starts Ion Deluge. Restores one gauge of battery life at end of each turn. Techno Blast: Steel-type, 1.3x power. Energy Ball: 1.3x power. Parabolic Charge drains 75%.",
 		onStart(pokemon) {
 			this.add('-activate', pokemon, 'item: Apparatus');
+			// Type change
+			pokemon.setType(['Electric']);
+			this.add("-start", pokemon, "typechange", "Electric", "[from] item: Apparatus");
+			// Magnet Rise + Ion Deluge
 			pokemon.addVolatile('magnetrise');
 			this.field.addPseudoWeather('iondeluge');
 		},
-		onModifyMove(move) {
-			if (move.id === 'paraboliccharge') move.drain = [3, 4];
-			if (move.id === 'technoblast') move.type = 'Steel';
-			if (move.id === 'technoblast' || move.id === 'energyball') move.basePower *= 1.3;
+		// Techno Blast becomes Steel
+		onModifyType(move, pokemon) {
+			if (move.id === 'technoblast') {
+				move.type = 'Steel';
+			}
+		},
+		// Parabolic Charge drains 75% instead of 50%
+		onModifyMove(move, pokemon) {
+			if (move.id === 'paraboliccharge') {
+				(move as any).drain = [3, 4];
+			}
+		},
+		onBasePowerPriority: 23,
+		onBasePower(basePower, pokemon, target, move) {
+			if (move.id === 'technoblast' || move.id === 'energyball') {
+				return this.chainModify([5325, 4096]); // 1.3x
+			}
 		},
 		onResidual(pokemon) {
-			if (pokemon.gauges >= 0 && pokemon.gauges < 5) {
+			if (pokemon.species.id !== 'vikavolttotem') return;
+			if (pokemon.gauges < 5) {
+				this.add('-activate', pokemon, 'item: Apparatus');
+				this.add('-message', `${pokemon.name} gained charge!`);
 				pokemon.gauges += 1;
-				this.add('-anim', pokemon, 'Charge');
-				this.add(`raw|${pokemon.name} is gaining charge! <b>(${pokemon.gauges}/5)</b>`);
-			}
-			if (pokemon.gauges === 5) {
-				this.add('-anim', pokemon, 'Discharge');
-				this.add('-anim', pokemon, 'Celebrate');
-				this.add('-message', `${pokemon.name} is brimming with charge!`);
+				this.add('-message', `Battery Remaining: ${(pokemon.gauges / 5) * 100}%`);
 			}
 		},
 	},
