@@ -699,6 +699,9 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 	smurfscrown: {
 		name: "Smurf\'s Crown",
 		spritenum: 236,
+		zMove: "Dynamic Shift",
+		zMoveFrom: "You Filthy Peasant",
+		itemUser: ["Kecleon"],
 		fling: {
 			basePower: 300,
 		},
@@ -722,26 +725,8 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 				this.heal(move.totalDamage / 4, pokemon);
 			}
 		},
-		onUpdate(pokemon) {
-			if (pokemon.hp <= pokemon.maxhp / 4) pokemon.eatItem();
-		},
-		onEat(pokemon) {
-			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
-			const r = this.random(100);
-			if (r < 33) {
-				pokemon.addVolatile('grudge');
-			} else if (r >= 33 && r < 66) {
-				this.heal(pokemon.baseMaxhp / 2, pokemon, pokemon);
-			} else if (r >= 66) {
-				let dmg = this.actions.getDamage(pokemon, target, 'Explosion');
-				this.add('-message', `${pokemon.name}'s crown exploded!`);
-				this.addMove('-anim', pokemon, 'Explosion', pokemon);
-				if (target.hp) this.damage(dmg, target, pokemon);
-				pokemon.faint(pokemon);
-			}
-		},
 		shortDesc: "See '/ssb Prince Smurf' for more!",
-		desc: "Prevents other Pokemon from lowering the holder's stats; after an attack, holder recovers 1/4 of the damage dealt to the Target. When the holder is at 1/4 HP or less it will trigger 1 of 3 reactions: Applies Grudge to the holder for a turn, item is then disposed; Heals the holder for 50% HP and cures party of status, item is then disposed; Forces the holder to explode.",
+		desc: "Prevents other Pokemon from lowering the holder's stats; after an attack, holder recovers 1/4 of the damage dealt to the Target. Holder is able to use Z-Move Dynamic Shift.",
 	},
 	// Kozuchi
 	forgedhammer: {
