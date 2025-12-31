@@ -1943,6 +1943,100 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		target: "normal",
 		type: "Normal",
 	},
+		dynamicshift: {
+		name: "Dynamic Shift",
+		category: "Status",
+		gen: 9,
+		isZ: "smurfscrown",
+		desc: "Sets a King’s Shield-like barrier for the rest of the turn: blocks Protect-blockable moves; lowers attacker Atk by 2 if Physical, SpA by 2 if Special. Permanently swaps Speed stats with the target (not boosts). Changes You Filthy Peasant to Last Resort.",
+		shortDesc: "Z. Shield + -2 Atk/SpA on block. Permanently swaps Spe. Filthy -> Last Resort.",
+		pp: 1,
+		priority: 4,
+		accuracy: true,
+		flags: {noassist: 1, failcopycat: 1},
+		stallingMove: true,
+		volatileStatus: 'dynamicshift',
+		type: "Normal",
+		target: "normal",
+		onPrepareHit(pokemon) {
+			return !!this.queue.willAct() && this.runEvent('StallMove', pokemon);
+		},
+		onTryMove(target, source) {
+			this.attrLastMove('[still]');
+		},
+		onPrepareHit(target, source) {
+			this.add('-anim', source, "King's Shield", source);
+		},
+		onHit(target, source, move) {
+			// Permanently swap Speed with the target (sticks after switching)
+			const a: any = source;
+			const b: any = target;
+			const containers = ['baseStoredStats', 'storedStats', 'stats'] as const;
+			let spe1: number | undefined;
+			let spe2: number | undefined;
+			for (const key of containers) {
+				if (a[key]?.spe != null && b[key]?.spe != null) {
+					spe1 = a[key].spe;
+					spe2 = b[key].spe;
+					break;
+				}
+			}
+			if (spe1 != null && spe2 != null) {
+				for (const key of containers) {
+					if (a[key]?.spe != null) a[key].spe = spe2;
+					if (b[key]?.spe != null) b[key].spe = spe1;
+				}
+				a.updateSpeed?.();
+				b.updateSpeed?.();
+				this.add('-message', `${source.name} turned the tides and swapped Speed with ${target.name}!`);
+			}
+			// Change You Filthy Peasant -> Last Resort
+			const slot = source.moveSlots.findIndex(s => s.id === 'youfilthypeasant');
+			if (slot >= 0) {
+				const lr = this.dex.moves.get('lastresort');
+				const s = source.moveSlots[slot];
+				s.id = lr.id;
+				s.move = lr.name;
+				s.maxpp = lr.pp;
+				if (s.pp > s.maxpp) s.pp = s.maxpp;
+				this.add('-message', `You Filthy Peasant became Last Resort!`);
+			}
+		},
+		condition: {
+			duration: 1,
+			onStart(target) {
+				this.add('-singleturn', target, 'move: Dynamic Shift');
+			},
+			onTryHitPriority: 3,
+			onTryHit(target, source, move) {
+				if (!move.flags['protect']) {
+					if (['gmaxoneblow', 'gmaxrapidflow'].includes(move.id)) return;
+					if (move.isZ || move.isMax) target.getMoveHitData(move).zBrokeProtect = true;
+					return;
+				}
+				if (move.smartTarget) {
+					move.smartTarget = false;
+				} else {
+					this.add('-activate', target, 'move: Dynamic Shift');
+				}
+				const lockedmove = source.getVolatile('lockedmove');
+				if (lockedmove) {
+					if (source.volatiles['lockedmove'].duration === 2) {
+						delete source.volatiles['lockedmove'];
+					}
+				}
+				if (source && !source.fainted && move.category !== 'Status') {
+					if (move.category === 'Physical') {
+						this.boost({atk: -2}, source, target);
+					} else if (move.category === 'Special') {
+						this.boost({spa: -2}, source, target);
+					}
+				}
+				return this.NOT_FAIL;
+			},
+		},
+		secondary: null,
+	},
 	// Kozuchi
 	emergencyupgrades: {
 		name: "Emergency Upgrades",
