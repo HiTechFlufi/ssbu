@@ -646,27 +646,39 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		name: "Apparatus",
 		gen: 9,
 		shortDesc: "See '/ssb Cyclommatic Cell' for more!",
-		desc: "On switch-in, starts Ion Deluge and Magnet Rise for holder. Restores one gauge of battery life at end of each turn. Techno Blast: Steel-type, 1.3x power.",
+		desc: "On switch-in, holder becomes Electric and gains Magnet Rise. Starts Ion Deluge. Restores one gauge of battery life at end of each turn. Techno Blast: Steel-type, 1.3x power. Energy Ball: 1.3x power. Parabolic Charge drains 75%.",
 		onStart(pokemon) {
 			this.add('-activate', pokemon, 'item: Apparatus');
+			pokemon.setType(['Electric']);
+			this.add("-start", pokemon, "typechange", "Electric", "[from] item: Apparatus");
 			pokemon.addVolatile('magnetrise');
 			this.field.addPseudoWeather('iondeluge');
 		},
-		onModifyMove(move) {
-			if (move.id === 'paraboliccharge') move.drain = [3, 4];
-			if (move.id === 'technoblast') move.type = 'Steel';
-			if (move.id === 'technoblast' || move.id === 'energyball') move.basePower *= 1.3;
+		// Techno Blast becomes Steel
+		onModifyType(move, pokemon) {
+			if (move.id === 'technoblast') {
+				move.type = 'Steel';
+			}
+		},
+		// Parabolic Charge drains 75% instead of 50%
+		onModifyMove(move, pokemon) {
+			if (move.id === 'paraboliccharge') {
+				(move as any).drain = [3, 4];
+			}
+		},
+		onBasePowerPriority: 23,
+		onBasePower(basePower, pokemon, target, move) {
+			if (move.id === 'technoblast' || move.id === 'energyball') {
+				return this.chainModify([5325, 4096]); // 1.3x
+			}
 		},
 		onResidual(pokemon) {
-			if (pokemon.m.gauges >= 0 && pokemon.m.gauges < 5) {
-				pokemon.m.gauges += 1;
-				this.add('-anim', pokemon, 'Charge');
-				this.add(`raw|${pokemon.name} is gaining charge! <b>(${pokemon.m.gauges}/5)</b>`);
-			}
-			if (pokemon.m.gauges === 5) {
-				this.add('-anim', pokemon, 'Discharge');
-				this.add('-anim', pokemon, 'Celebrate');
-				this.add('-message', `${pokemon.name} is brimming with charge!`);
+			if (pokemon.species.id !== 'vikavolttotem') return;
+			if (pokemon.gauges < 5) {
+				this.add('-activate', pokemon, 'item: Apparatus');
+				this.add('-message', `${pokemon.name} gained charge!`);
+				pokemon.gauges += 1;
+				this.add('-message', `Battery Remaining: ${(pokemon.gauges / 5) * 100}%`);
 			}
 		},
 	},
@@ -685,6 +697,9 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 	smurfscrown: {
 		name: "Smurf\'s Crown",
 		spritenum: 236,
+		zMove: "Dynamic Shift",
+		zMoveFrom: "You Filthy Peasant",
+		itemUser: ["Kecleon"],
 		fling: {
 			basePower: 300,
 		},
@@ -708,26 +723,8 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 				this.heal(move.totalDamage / 4, pokemon);
 			}
 		},
-		onUpdate(pokemon) {
-			if (pokemon.hp <= pokemon.maxhp / 4) pokemon.eatItem();
-		},
-		onEat(pokemon) {
-			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
-			const r = this.random(100);
-			if (r < 33) {
-				pokemon.addVolatile('grudge');
-			} else if (r >= 33 && r < 66) {
-				this.heal(pokemon.baseMaxhp / 2, pokemon, pokemon);
-			} else if (r >= 66) {
-				let dmg = this.actions.getDamage(pokemon, target, 'Explosion');
-				this.add('-message', `${pokemon.name}'s crown exploded!`);
-				this.addMove('-anim', pokemon, 'Explosion', pokemon);
-				if (target.hp) this.damage(dmg, target, pokemon);
-				pokemon.faint(pokemon);
-			}
-		},
 		shortDesc: "See '/ssb Prince Smurf' for more!",
-		desc: "Prevents other Pokemon from lowering the holder's stats; after an attack, holder recovers 1/4 of the damage dealt to the Target. When the holder is at 1/4 HP or less it will trigger 1 of 3 reactions: Applies Grudge to the holder for a turn, item is then disposed; Heals the holder for 50% HP and cures party of status, item is then disposed; Forces the holder to explode.",
+		desc: "Prevents other Pokemon from lowering the holder's stats; after an attack, holder recovers 1/4 of the damage dealt to the Target. Holder is able to use Z-Move Dynamic Shift.",
 	},
 	// Kozuchi
 	forgedhammer: {
