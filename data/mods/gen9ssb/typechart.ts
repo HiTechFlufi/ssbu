@@ -3,7 +3,7 @@ export const TypeChart: import('../../../sim/dex-data').ModdedTypeDataTable = {
 		damageTaken: {
 			Light: 2,
 			Bug: 0,
-			Dark: 2,
+			Dark: 0,
 			Dragon: 0,
 			Electric: 2,
 			Fairy: 2,
