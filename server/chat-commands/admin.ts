@@ -143,6 +143,21 @@ export const commands: Chat.ChatCommands = {
 		`/potd [pokemon] - Set the Pokemon of the Day to the given [pokemon]. Requires: ~`,
 	],
 
+	ssbpotd(target, room, user) {
+		if (!Object.keys(ssbSets).map(toID).includes(toID(target)) || !ssbSets[target]) {
+			return this.errorReply(`"${target}" is not a valid [Gen 9] Super Staff Bros set. (Note: For ease of programming, this command is case sensitive!)`);
+		}
+		Config.ssbpotd = target;
+		for (const process of Rooms.PM.processes) {
+			process.getProcess().send(`EVAL\n\nConfig.ssbpotd = '${target}'`);
+		}
+		this.addGlobalModAction(`${user.name} set the SSB PotD to ${target}.`);
+		this.globalModlog(`SSBPOTD`, null, target);
+	},
+	ssbpotdhelp: [
+		`/ssbpotd [pokemon] - Set the SSB Pokemon of the Day to the given [pokemon]. If the given Pokemon does not have an SSB set, this setting is ignored. Requires: &`,
+	],
+
 	/*********************************************************
 	 * Bot commands (chat-log manipulation)
 	 *********************************************************/

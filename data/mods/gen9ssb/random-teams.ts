@@ -138,6 +138,12 @@ export const ssbSets: SSBSets = {
 		signatureMove: 'Complete Darkness',
 		evs: { spa: 252, spd: 4, spe: 252 }, ivs: { atk: 0 }, nature: 'Timid',
 	},
+	Neptune: {
+		species: 'Pidgeot-Mega', ability: '???', item: 'Storm Talisman', gender: 'M',
+		moves: ['Hurricane'],
+		signatureMove: 'Golden Order',
+		evs: {}, nature: 'Bashuful',
+	},
 	Pablo: {
 		species: 'Smeargle', ability: 'Artist Block', item: 'Sketchbook', gender: 'M',
 		moves: ['Sketch', 'Copycat', 'Assist'],
@@ -271,13 +277,19 @@ export class RandomStaffBrosTeams extends RandomTeams {
 		if (global.Config?.disabledssbsets?.length) {
 			pool = pool.filter(x => !global.Config.disabledssbsets.includes(this.dex.toID(x)));
 		}
+		const usePotD = global.Config && Config.ssbpotd;
+		const potd = usePotD ? Config.ssbpotd : null;
 		const typePool: { [k: string]: number } = {};
 		let depth = 0;
 		while (pool.length && team.length < this.maxTeamSize) {
 			if (depth >= 200) throw new Error(`Infinite loop in Super Staff Bros team generation.`);
 			depth++;
-			const name = meme ? this.sample(pool) : afd ? 'April' : this.sampleNoReplace(pool);
-			const ssbSet: SSBSet = meme ? this.dex.deepClone(afdSSBSets[name]) : this.dex.deepClone(ssbSets[name]);
+			let name = this.sampleNoReplace(pool);
+			if (name === Config.ssbpotd) continue;
+			if (usePotD && team.length === 1) {
+				if (ssbSets[Config.ssbpotd]) name = Config.ssbpotd;
+			}
+			let ssbSet: SSBSet = meme ? this.dex.deepClone(afdSSBSets[name]) : this.dex.deepClone(ssbSets[name]);
 			if (ssbSet.skip) continue;
 
 			// Enforce typing limits

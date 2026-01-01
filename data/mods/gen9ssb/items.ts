@@ -1,4 +1,32 @@
 export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
+	// Neptune
+	stormtalisman: {
+		name: "Storm Talisman",
+		desc: "Summons strong winds that remove all entry hazards upon starting. Effects end if the holder switches or faints, or if this item is removed.",
+		shortDesc: "Summons Delta Stream, removing hazards.",
+		gen: 9,
+		onStart(pokemon) {
+			this.field.setWeather('deltastream');
+			this.field.weatherState.source = pokemon;
+
+			const target = pokemon.side.foe.active;
+			const hazards = ['stealthrock', 'spikes', 'toxicspikes', 'stickyweb'];
+
+			let hazardsRemoved = false;
+			for (const h of hazards) {
+				if (pokemon.side.removeSideCondition(h)) {
+					hazardsRemoved = true;
+					this.add('-sideend', pokemon.side, this.dex.conditions.get(h).name);
+				}
+			}
+			for (const h of hazards) {
+				if (target.side.removeSideCondition(h)) {
+					hazardsRemoved = true;
+					this.add('-sideend', pokemon.side, this.dex.conditions.get(h).name);
+				}
+			}
+		},
+	},
 	// Roughskull
 	cheaterglasses: {
 		name: "Cheater Glasses",
