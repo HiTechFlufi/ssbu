@@ -2290,38 +2290,55 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 	},
 	// Cyclommatic Cell
 	parabolicdischarge: {
-		accuracy: true,
-		basePower: 150,
-		category: "Special",
 		name: "Parabolic Discharge",
-		desc: "Fails if Electric Terrain is not active. Ends Electric Terrain. Changes the user's ability to Electromorphosis.",
-		shortDesc: "Must be used in Electric Terrain; User gains Electromorphosis.",
+		category: "Special",
+		gen: 9,
+		desc: "Fails unless Electric Terrain is active. After dealing damage, Electric Terrain ends. Drains the user's Battery Life to 0 and changes its ability to Electromorphosis.",
+		shortDesc: "Only in Electric Terrain. Ends Terrain. Gauges -> 0. Becomes Electromorphosis.",
+		basePower: 150,
+		accuracy: true,
 		pp: 5,
 		priority: 0,
-		flags: { protect: 1, reflectable: 1, mirror: 1, metronome: 1 },
-		onTryMove() {
+		ignoreAbility: true,
+		flags: {protect: 1, metronome: 1},
+		type: "Electric",
+		target: "normal",
+		onTry(source, target, move) {
+			const field: any = this.field;
+			const isET = (field.isTerrain && field.isTerrain('electricterrain')) || field.terrain === 'electricterrain';
+			if (!isET) {
+				this.add('-fail', source, move, '[from] terrain');
+				return null;
+			}
+		},
+		onTryMove(target, source, move) {
 			this.attrLastMove('[still]');
 		},
-		onPrepareHit(target, source) {
-			if (!this.field.isTerrain("electricterrain") ||
-			!source.m.gauges) return null;
-
-			this.add('-anim', source, 'Parabolic Charge', source);
+		onPrepareHit(target, source, move) {
+			this.add('-anim', source, 'Parabolic Charge', target);
 			this.add('-anim', source, 'Electro Shot', target);
 		},
-		onHit(source) {
-			source.m.gauges = 0;
-			let newAbility = this.dex.abilities.get('electromorphosis');
-			const abilitySet = source.setAbility(newAbility);
-			if (abilitySet) {
-				this.add('-ability', source, source.getAbility().name, '[from] move: Parabolic Discharge', '[of] ' + source);
-				return;
+		onHit(target, source, move) {
+			// Drain gauges to 0
+			if (!source.gauges) (source as any).gauges = {};
+			(source.gauges as any).gauges = 0;
+			// End Electric Terrain immediately
+			const field: any = this.field;
+			if (field.clearTerrain) {
+				field.clearTerrain();
+			} else if (field.setTerrain) {
+				field.setTerrain('');
+			} else {
+				field.terrain = '';
 			}
-			return abilitySet as false | null;
+			this.add('-message', `The Electric Terrain shorted out!`);
+			// Become Electromorphosis
+			if (source.ability !== 'electromorphosis') {
+				source.setAbility('electromorphosis', source, move);
+				this.add('-ability', source, 'Electromorphosis', '[from] move: Parabolic Discharge');
+				this.add('-anim', source, 'Charge', source);
+			}
 		},
-		secondary: null,
-		target: "normal",
-		type: "Electric",
 	},
 	// Morte
 	omenofdefeat: {
@@ -2568,6 +2585,100 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		target: "normal",
 		type: "Normal",
 	},
+	dynamicshift: {
+		name: "Dynamic Shift",
+		category: "Status",
+		gen: 9,
+		isZ: "smurfscrown",
+		desc: "Sets a King’s Shield-like barrier for the rest of the turn: blocks Protect-blockable moves; lowers attacker Atk by 2 if Physical, SpA by 2 if Special. Permanently swaps Speed stats with the target (not boosts). Changes You Filthy Peasant to Last Resort.",
+		shortDesc: "Z. Shield + -2 Atk/SpA on block. Permanently swaps Spe. Filthy -> Last Resort.",
+		pp: 1,
+		priority: 4,
+		accuracy: true,
+		flags: {noassist: 1, failcopycat: 1},
+		stallingMove: true,
+		volatileStatus: 'dynamicshift',
+		type: "Normal",
+		target: "normal",
+		onPrepareHit(pokemon) {
+			return !!this.queue.willAct() && this.runEvent('StallMove', pokemon);
+		},
+		onTryMove(target, source) {
+			this.attrLastMove('[still]');
+		},
+		onPrepareHit(target, source) {
+			this.add('-anim', source, "King's Shield", source);
+		},
+		onHit(target, source, move) {
+			// Permanently swap Speed with the target (sticks after switching)
+			const a: any = source;
+			const b: any = target;
+			const containers = ['baseStoredStats', 'storedStats', 'stats'] as const;
+			let spe1: number | undefined;
+			let spe2: number | undefined;
+			for (const key of containers) {
+				if (a[key]?.spe != null && b[key]?.spe != null) {
+					spe1 = a[key].spe;
+					spe2 = b[key].spe;
+					break;
+				}
+			}
+			if (spe1 != null && spe2 != null) {
+				for (const key of containers) {
+					if (a[key]?.spe != null) a[key].spe = spe2;
+					if (b[key]?.spe != null) b[key].spe = spe1;
+				}
+				a.updateSpeed?.();
+				b.updateSpeed?.();
+				this.add('-message', `${source.name} turned the tides and swapped Speed with ${target.name}!`);
+			}
+			// Change You Filthy Peasant -> Last Resort
+			const slot = source.moveSlots.findIndex(s => s.id === 'youfilthypeasant');
+			if (slot >= 0) {
+				const lr = this.dex.moves.get('lastresort');
+				const s = source.moveSlots[slot];
+				s.id = lr.id;
+				s.move = lr.name;
+				s.maxpp = lr.pp;
+				if (s.pp > s.maxpp) s.pp = s.maxpp;
+				this.add('-message', `You Filthy Peasant became Last Resort!`);
+			}
+		},
+		condition: {
+			duration: 1,
+			onStart(target) {
+				this.add('-singleturn', target, 'move: Dynamic Shift');
+			},
+			onTryHitPriority: 3,
+			onTryHit(target, source, move) {
+				if (!move.flags['protect']) {
+					if (['gmaxoneblow', 'gmaxrapidflow'].includes(move.id)) return;
+					if (move.isZ || move.isMax) target.getMoveHitData(move).zBrokeProtect = true;
+					return;
+				}
+				if (move.smartTarget) {
+					move.smartTarget = false;
+				} else {
+					this.add('-activate', target, 'move: Dynamic Shift');
+				}
+				const lockedmove = source.getVolatile('lockedmove');
+				if (lockedmove) {
+					if (source.volatiles['lockedmove'].duration === 2) {
+						delete source.volatiles['lockedmove'];
+					}
+				}
+				if (source && !source.fainted && move.category !== 'Status') {
+					if (move.category === 'Physical') {
+						this.boost({atk: -2}, source, target);
+					} else if (move.category === 'Special') {
+						this.boost({spa: -2}, source, target);
+					}
+				}
+				return this.NOT_FAIL;
+			},
+		},
+		secondary: null,
+	},	
 	// Kozuchi
 	emergencyupgrades: {
 		name: "Emergency Upgrades",
