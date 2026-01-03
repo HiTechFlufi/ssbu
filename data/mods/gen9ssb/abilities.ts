@@ -1465,12 +1465,12 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		shortDesc: "Stores charge to power up Electric moves/Techno Blast.",
 		desc: "This Pokemon stores up to five gauges of charge, starting at five at the start of battle. This Pokemon uses charge gauges to power up Electric moves and Techno Blast. Opposing Electric moves heal the user for 1/4 max HP and increase charge gauges; Electric immunity. Sets Electric Terrain and must recharge if the user runs out of charge gauges. Electric moves and Techno Blast fail if the user does not have enough charge gauges stored.",
 		onStart(pokemon) {
-			if (pokemon.gauges == null) pokemon.gauges = 5;
+			if (pokemon.m.gauges == null) pokemon.m.gauges = 5;
 		},
 		onBasePower(basePower, attacker, defender, move) {
 			if (move.category === 'Status') return;
-			let g: number = attacker.gauges;
-			if (g == null) g = attacker.gauges = 0;
+			let g: number = attacker.m.gauges;
+			if (g == null) g = attacker.m.gauges = 0;
 			if (g <= 1) return this.chainModify(0.5);
 			if (g === 2) return this.chainModify(0.75);
 			if (g === 4) return this.chainModify(1.25);
@@ -1481,30 +1481,30 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			if (target !== source && move.type === 'Electric') {
 				this.heal(Math.floor(target.baseMaxhp / 4), target);
 				target.addVolatile('charge');
-				if (target.gauges == null) target.gauges = 0;
-				if (target.gauges < 5) target.gauges++;
+				if (target.m.gauges == null) target.m.gauges = 0;
+				if (target.m.gauges < 5) target.m.gauges++;
 				this.add('-message', `${target.name} was charged up by ${move.name}!`);
 				return null; // negates the hit
 			}
 		},
 		onBeforeMove(pokemon, target, move) {
 			if (move.category === 'Status') return;
-			if (pokemon.gauges == null) pokemon.gauges = 0;
+			if (pokemon.m.gauges == null) pokemon.m.gauges = 0;
 			let cost = 0;
 			if (move.id === 'technoblast') cost = 3;
 			else if (move.type === 'Electric') cost = 2;
 			if (!cost) return;
-			if (pokemon.gauges < cost) {
+			if (pokemon.m.gauges < cost) {
 				this.add('-message', `${pokemon.name} doesn't have enough battery!`);
 				return false;
 			}
-			pokemon.gauges -= cost;
+			pokemon.m.gauges -= cost;
 			this.add('-message', `${pokemon.name} used its battery to power up ${move.name}!`);
 		},
 		onResidual(pokemon) {
-			if (pokemon.gauges == null) pokemon.gauges = 0;
+			if (pokemon.m.gauges == null) pokemon.m.gauges = 0;
 			// If out of battery: enter recharge mode (but don't spam every turn)
-			if (pokemon.gauges <= 0) {
+			if (pokemon.m.gauges <= 0) {
 				this.add('-anim', pokemon, 'Tickle', pokemon);
 				this.add('-message', `${pokemon.name} is out of battery!`);
 				// Only set terrain / mustrecharge if not already active
@@ -1514,20 +1514,20 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 				if (!pokemon.volatiles['mustrecharge']) {
 					pokemon.addVolatile('mustrecharge');
 				}
-			} else if (pokemon.gauges >= 5) {
+			} else if (pokemon.m.gauges >= 5) {
 				this.add('-anim', pokemon, 'Charge', pokemon);
 				if (!pokemon.volatiles['charge']) pokemon.addVolatile('charge');
 				this.add('-message', `${pokemon.name} is at maximum charge!`);
 			} else {
 				this.add('-anim', pokemon, 'Charge', pokemon);
-				this.add('-message', `${pokemon.name} is at ${(pokemon.gauges / 5) * 100}% battery!`);
+				this.add('-message', `${pokemon.name} is at ${(pokemon.m.gauges / 5) * 100}% battery!`);
 			}
 			let gained = 0;
 			if (pokemon.status === 'slp') gained++;
 			if (this.field.isTerrain('electricterrain')) gained++;
-			if (gained && pokemon.gauges < 5) {
+			if (gained && pokemon.m.gauges < 5) {
 				this.add('-activate', pokemon, 'ability: Battery Life');
-				pokemon.gauges = Math.min(5, pokemon.gauges + gained);
+				pokemon.m.gauges = Math.min(5, pokemon.m.gauges + gained);
 				this.add('-message',
 					gained === 1 ? `${pokemon.name} is charging up!` : `${pokemon.name} is charging rapidly!`
 				);
