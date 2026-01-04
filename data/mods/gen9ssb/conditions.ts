@@ -32,11 +32,7 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 			this.add('-sidestart', side, 'Silken Drafts', '[silent]');
 		},
 		onBasePower(basePower, source, target, move) {
-			this.add('-message', `CURRENT MOVE TYPE IS ${move.type}`);
-			this.add('-message', `IMPRINT TYPE IS ${source.side.imprintType}`);
-			this.add('-message', `FOE IMPRINT TYPE IS ${target.side.imprintType}`);
 			if (source !== target && move.type == source.side.imprintType) {
-				this.add('-message', 'yeeees... they match... boosting........');
 				return this.chainModify(1.4);
 			}
 		},
