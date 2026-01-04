@@ -1731,44 +1731,14 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			if (!pokemon.activeTurns || pokemon.activeTurns < 2) pokemon.tryTrap(true);
 		},
 	},
-	// Sariel
-	angelofdeath: {
-		desc: "While this Pokemon is active, opposing Pokemon are prevented from healing and lose HP equal to 1/16 of their max HP per turn.",
-		shortDesc: "Opponents cannot heal; Lose 1/16 max HP per turn.",
-		onDisableMove(pokemon) {
-			for (const target of pokemon.foes()) {
-				for (const moveSlot of target.moveSlots) {
-					if (this.dex.moves.get(moveSlot.id).flags['heal']) {
-						target.disableMove(moveSlot.id);
-					}
-				}
-			}
+	nowuntilyoudie: {
+		name: "Now, Until You Die",
+	   gen: 9,
+		desc: "Upon attacking, the target's max HP is set to its current HP.",
+		shortDesc: "Attacks set max HP to current.",
+		onSourceDamagingHit(damage, target, source, move) {
+			target.maxhp = target.hp;
 		},
-		onBeforeMovePriority: 6,
-		onFoeTryMove(target, source, move) {
-			if (move.flags['heal'] && !move.isZ && !move.isMax) {
-				this.attrLastMove('[still]');
-				this.add('cant', target, 'ability: Angel of Death', move);
-				return false;
-			}
-		},
-		onResidualOrder: 28,
-		onResidualSubOrder: 2,
-		onResidual(pokemon) {
-			if (!pokemon.hp) return;
-			for (const target of pokemon.foes()) {
-				this.damage(target.baseMaxhp / 16, target, pokemon);
-			}
-		},
-		onTryHeal(damage, pokemon, effect) {
-			for (const target of pokemon.foes()) {
-				if ((effect?.id === 'zpower') || this.effectState.isZ) return damage;
-				return false;
-			}
-		},
-		flags: {},
-		name: "Angel of Death",
-		gen: 9,
 	},
 	// Mima
 	vengefulspirit: {
