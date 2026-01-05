@@ -235,16 +235,17 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 	giftsack: {
 		name: "Gift Sack",
 		gen: 9,
-		shortDesc: "Swaps foe's strongest move; Absorbs up to 1 special move.",
-		desc: "Replaces the target's strongest attacking move with another random move on switch-in. If this Pokemon is hit by a Special attack, it stores the attack and takes no damage, storing up to one attack. Upon using Gift of Fortune, holder uses move stored by Gift Sack if one is present.",
+		shortDesc: "Swaps foe's strongest move; Stores 1 Special; Full sack clashes back.",
+		desc: "Replaces the target's strongest attacking move with another random move on switch-in. If this Pokemon is hit by a Special attack while the sack is empty, it stores the move and takes no damage. If the sack is full, Special attacks deal reduced damage based on base power difference, and the stored move is fired back after the hit, emptying the sack.",
 		onStart(pokemon) {
 			let max = 0;
-			let strongestMove;
+			let strongestMove: Move | undefined;
 			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
+			if (!target) return;
 			// Find opposing Pokemon's strongest attack
 			for (const moveSlot of target.moveSlots) {
 				const move = this.dex.moves.get(moveSlot.move);
-				if (move.category === 'Status' || !move.basePower) continue;
+				if (!move || move.category === 'Status' || !move.basePower) continue;
 				if (move.basePower > max) {
 					max = move.basePower;
 					strongestMove = move;
@@ -252,11 +253,13 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 			}
 			if (!strongestMove) return;
 			const moveIndex = target.moves.indexOf(strongestMove.id);
+			if (moveIndex < 0) return;
 			const allMoves = this.dex.moves.all().filter(m => (
 				(!target.moves.includes(m.id)) &&
 				(!m.isNonstandard || m.isNonstandard === 'Unobtainable') &&
 				(m.flags['metronome'])
 			));
+			if (!allMoves.length) return;
 			const randomMove = this.sample(allMoves);
 			target.moveSlots[moveIndex] = {
 				move: randomMove.name,
@@ -274,21 +277,63 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 			this.add('-message', `${target.name} forgot ${strongestMove.name}, and learned ${randomMove.name}!`);
 		},
 		onTryHit(pokemon, source, move) {
-			if (move.category === 'Special' && pokemon !== source) {
-				if (!pokemon.m.sack) pokemon.m.sack = [];
-				if (pokemon.m.sack.length >= 1) return;
+			if (pokemon === source) return;
+			if (!move || move.category !== 'Special') return;
+			if (!pokemon.m) pokemon.m = {} as any;
+			if (!pokemon.m.sack) pokemon.m.sack = [];
+			if (!pokemon.m.sack.length) {
 				this.add('-anim', pokemon, 'Present', pokemon);
 				this.add('-anim', pokemon, 'Tickle', pokemon);
 				this.add('-activate', pokemon, 'item: Gift Sack', move.name);
 				this.add('-message', `${pokemon.name} stored ${move.name} in its Gift Sack!`);
-				pokemon.m.sack.push(move.name);
+				pokemon.m.sack.push(move.id);
 				return null;
 			}
 		},
+		onSourceModifyDamage(damage, source, target, move) {
+			if (!move || move.category !== 'Special') return;
+			if (source === target) return;
+			if (!target.m?.sack?.length) return;
+			const stored = this.dex.moves.get(target.m.sack[0]);
+			if (!stored || !stored.exists) return;
+			if (target.m.sackClashTurn !== this.turn) {
+				target.m.sackClashTurn = this.turn;
+				this.add('-message', `${target.name}'s Gift Sack clashed with the incoming attack!`);
+			}
+			// BP-based reduction (clamped so it never becomes goofy)
+			const inBP = move.basePower || this.dex.moves.get(move.id).basePower || 0;
+			const stBP = stored.basePower || 0;
+			let mult = 0.75; // baseline: 25% reduction
+			if (inBP && stBP) {
+				// If stored move is stronger, reduce more. If weaker, reduce less.
+				// diff +50 => about 50% damage, diff -50 => about 90% damage
+				const diff = stBP - inBP;
+				mult = 0.75 - (diff / 200);
+				if (mult < 0.35) mult = 0.35;
+				if (mult > 0.9) mult = 0.9;
+			}
+			return this.chainModify(mult);
+		},
+		onDamagingHit(damage, target, source, move) {
+			if (!move || move.category !== 'Special') return;
+			if (!target.m?.sack?.length) return;
+			if (!source || source.fainted) return;
+			if (target.fainted) return;
+			// Prevent multiple counters in the same turn (multi-hit etc.)
+			if (target.m.sackCounterTurn === this.turn) return;
+			target.m.sackCounterTurn = this.turn;
+			const stored = this.dex.moves.get(target.m.sack[0]);
+			if (!stored || !stored.exists) return;
+			this.add('-message', `${target.name} fired back with the stored ${stored.name}!`);
+			this.add('-anim', target, 'Present', source);
+			this.actions.useMove(stored.id, target, source);
+			target.m.sack = [];
+			this.add('-message', `${target.name} emptied its Gift Sack!`);
+		},
 		onBasePowerPriority: 15,
 		onBasePower(basePower, user, target, move) {
-			if (!user.m.sack) return;
-			if (user.m.sack.length && move.id === 'giftoffortune') {
+			if (!user.m?.sack?.length) return;
+			if (move.id === 'giftoffortune') {
 				this.add('-message', `${user.name}'s Gift Sack amplified ${move.name}'s power!`);
 				return this.chainModify(1 + 0.5 * user.m.sack.length);
 			}
@@ -371,27 +416,116 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 	// Aevum
 	rewindwatch: {
 		name: "Rewind Watch",
-		shortDesc: "Calyrex: Grass/Steel. Survives first KO and fully heals.",
-		desc: "Holder becomes Grass/Steel type if held by a Calyrex. If the holder would be knocked out by an attacking move, survives with at least one HP, then restores back to full health. Cannot be taken or removed. Single use.",
 		gen: 9,
 		onTakeItem: false,
+		shortDesc: "Calyrex: Grass/Steel. In Temporal Terrain: +1 prio (first move), 1.25x power, 0.85x dmg taken. Repeating moves get punished. 1x rewinds a KO.",
+		desc: "If held by a Calyrex, the holder becomes Grass/Steel. While Temporal Terrain is active, the holder's damaging moves are 1.25x power, it takes 0.85x damage, and its first damaging move each turn gets +1 priority. If an attacker hits the holder with the same damaging move on consecutive turns, that hit is halved and the attacker loses 1 stage of its attacking stat. Once per battle, if the holder would be knocked out by a move, it survives at 1 HP, then rewinds to full HP, cures status, clears common volatile effects, and resets negative stat drops; the item is consumed.",
 		onStart(pokemon) {
+			// Calyrex-only typing
 			if (pokemon.baseSpecies.baseSpecies === 'Calyrex' && pokemon.setType(['Grass', 'Steel'])) {
 				this.add('-start', pokemon, 'typechange', 'Grass/Steel', '[from] item: Rewind Watch');
 			}
+			if (!pokemon.itemState) pokemon.itemState = {};
+			pokemon.itemState.rewindUsed = false;
+			pokemon.itemState.prevAttacker = null;
+			pokemon.itemState.prevMove = '';
+			pokemon.itemState.prevTurn = 0;
+			pokemon.itemState.predictedTurn = 0;
+			pokemon.itemState.predictedAttacker = null;
+			pokemon.itemState.predictedCat = '';
+			pokemon.itemState.tempoTurn = 0;
+		},
+		// ===== Temporal Terrain buffs =====
+		onModifyMove(move, pokemon) {
+			if (!this.field.isTerrain('temporalterrain')) return;
+			if (move.category === 'Status') return;
+			// +1 priority only on first damaging move each turn
+			if (pokemon.itemState.tempoTurn !== this.turn) {
+				move.priority = (move.priority || 0) + 1;
+				pokemon.itemState.tempoTurn = this.turn;
+				this.add('-activate', pokemon, 'item: Rewind Watch');
+				this.add('-anim', pokemon, 'Trick Room', pokemon);
+			}
+		},
+		onBasePowerPriority: 23,
+		onBasePower(basePower, pokemon, target, move) {
+			if (!this.field.isTerrain('temporalterrain')) return;
+			if (move.category === 'Status') return;
+			return this.chainModify([5120, 4096]);
+		},
+		// 0.85x damage taken in Temporal Terrain, plus "repeat punish" check
+		onSourceModifyDamage(damage, source, target, move) {
+			if (!move || move.category === 'Status') return;
+			let out = damage;
+			if (this.field.isTerrain('temporalterrain')) {
+				out = this.chainModify([3482, 4096]); // ~0.85
+			}
+			// Repeat punish: same attacker + same move on consecutive turns
+			const st: any = target.itemState;
+			if (source && st.prevAttacker === source && st.prevMove === move.id && st.prevTurn === this.turn - 1) {
+				this.add('-activate', target, 'item: Rewind Watch');
+				this.add('-anim', target, 'Future Sight', target);
+				this.add('-message', `${target.name} already saw that coming!`);
+				st.predictedTurn = this.turn;
+				st.predictedAttacker = source;
+				st.predictedCat = move.category;
+				out = this.chainModify(0.5);
+			}
+			return out;
+		},
+		onDamagingHitOrder: 2,
+		onDamagingHit(damage, target, source, move) {
+			target.itemState.prevAttacker = source;
+			target.itemState.prevMove = move.id;
+			target.itemState.prevTurn = this.turn;
+			const st: any = target.itemState;
+			if (st.predictedTurn === this.turn && st.predictedAttacker === source) {
+				if (st.predictedCat === 'Physical') {
+					this.boost({atk: -1}, source, target);
+				} else if (st.predictedCat === 'Special') {
+					this.boost({spa: -1}, source, target);
+				}
+				this.add('-message', `${source.name}'s repetition backfired!`);
+				st.predictedTurn = 0;
+				st.predictedAttacker = null;
+				st.predictedCat = '';
+			}
 		},
 		onDamage(damage, target, source, effect) {
-			if (damage >= target.hp && effect && effect.effectType === 'Move') {
-				target.itemState.useWatch = true;
+			if (target.itemState.rewindUsed) return;
+			if (!effect || effect.effectType !== 'Move') return;
+			if (damage >= target.hp) {
+				target.itemState.rewindUsed = true;
+				target.itemState.rewindPending = true;
 				this.add('-activate', target, 'item: Rewind Watch');
+				this.add('-anim', target, 'Trick Room', target);
 				return target.hp - 1;
 			}
 		},
 		onAfterMoveSecondary(target, source, move) {
-			if (target.itemState.useWatch) {
-				target.useItem();
-				this.heal(target.maxhp - target.hp, target, target, 'item: Rewind Watch');
+			if (!target.itemState.rewindPending) return;
+			target.itemState.rewindPending = false;
+			target.useItem();
+			this.add('-anim', target, 'Recover', target);
+			this.heal(target.maxhp - target.hp, target, target, 'item: Rewind Watch');
+			// cure status
+			if (target.status) target.cureStatus();
+			// clear common nasty volatiles (feel free to tweak this list)
+			const clearVols = [
+				'confusion', 'attract', 'taunt', 'torment', 'disable', 'encore',
+				'leechseed', 'yawn', 'partiallytrapped',
+			];
+			for (const v of clearVols) {
+				if (target.volatiles[v]) target.removeVolatile(v);
 			}
+			// reset ONLY negative boosts back to 0
+			const fix: any = {};
+			for (const stat in target.boosts) {
+				const val = (target.boosts as any)[stat];
+				if (val < 0) fix[stat] = -val;
+			}
+			if (Object.keys(fix).length) this.boost(fix, target, target);
+			this.add('-message', `${target.name} rewound the timeline!`);
 		},
 	},
 	// Suika Ibuki
@@ -556,6 +690,66 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 			}
 		},
 	},
+	//Shigeki
+	bloodpacks: {
+		name: "Blood Packs",
+		gen: 9,
+		shortDesc: "At ≤50% HP consume A/B/AB. From full, survive KO at 1 HP once. Non-Gligar: tox.",
+		desc: "When the holder reaches 50% HP or less, it consumes a Blood Pack. If HP falls to 25% or less, it consumes Type AB. Otherwise if the damage was super effective, it consumes Type B; else Type A. If held by a non-Gligar, it is badly poisoned instead. From full HP, the holder can survive a would-be KO at 1 HP once.",
+		onStart(pokemon) {
+			if (!pokemon.itemState) pokemon.itemState = {};
+			pokemon.itemState.bpConsumed = false;
+			pokemon.itemState.bpSashUsed = false;
+			pokemon.itemState.bpLastHitSE = false;
+		},
+		// track whether the last damaging hit was super effective
+		onDamagingHit(damage, target, source, move) {
+			if (!target.itemState) target.itemState = {};
+			const stage = move ? this.dex.getEffectiveness(move.type, target) : 0;
+			target.itemState.bpLastHitSE = stage > 0;
+		},
+		// Focus Sash style from full once
+		onDamage(damage, pokemon) {
+			if (!pokemon.itemState) pokemon.itemState = {};
+			if (pokemon.itemState.bpSashUsed) return;
+			if (pokemon.hp === pokemon.maxhp && damage >= pokemon.hp) {
+				pokemon.itemState.bpSashUsed = true;
+				this.add('-activate', pokemon, 'item: Blood Packs');
+				return pokemon.hp - 1;
+			}
+		},
+		onUpdate(pokemon) {
+			if (!pokemon.itemState) pokemon.itemState = {};
+			if (pokemon.itemState.bpConsumed) return;
+			if (pokemon.fainted) return;
+			if (pokemon.hp > pokemon.maxhp / 2) return;
+
+			let pack: 'a' | 'b' | 'ab' = 'a';
+			if (pokemon.hp <= pokemon.maxhp / 4) {
+				pack = 'ab';
+			} else if (pokemon.itemState.bpLastHitSE) {
+				pack = 'b';
+			}
+			pokemon.itemState.bpConsumed = true;
+			this.add('-activate', pokemon, 'item: Blood Packs');
+			if (pokemon.species.id !== 'gligar') { // Non-Gligar gets tox, no bonus
+				pokemon.setStatus('tox', pokemon);
+				pokemon.useItem();
+				return;
+			}
+			if (pack === 'a') {
+				this.add('-message', `${pokemon.name} consumed Blood Pack Type A!`);
+				pokemon.addVolatile('bloodpacka');
+			} else if (pack === 'b') {
+				this.add('-message', `${pokemon.name} consumed Blood Pack Type B!`);
+				pokemon.addVolatile('bloodpackb');
+			} else {
+				this.add('-message', `${pokemon.name} consumed Blood Pack Type AB!`);
+				pokemon.addVolatile('bloodpackab');
+			}
+			pokemon.useItem();
+		},
+	},	
 	// PokeKart
 	flameflyer: {
 		name: "Flame Flyer",
