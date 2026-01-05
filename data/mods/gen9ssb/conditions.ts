@@ -59,6 +59,145 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 			}
 		},
 	},
+	//Shigeki
+	bleeding: {
+		name: "Bleeding",
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Bleeding');
+		},
+		onResidual(pokemon) {
+			this.damage(Math.floor(pokemon.maxhp / 16), pokemon);
+		},
+		// Reduce ALL damage the bleeding mon deals
+		onModifyDamage(damage, source, target, move) {
+			return this.chainModify([3072, 4096]); // 0.75
+		},
+		onSourceModifyDamage(damage, source, target, move) {
+			return this.chainModify([3072, 4096]);
+		},
+	},
+
+	brainwashed: {
+		name: "Brainwashed",
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Brainwashed');
+			(this.effectState as any).lastMove = '';
+		},
+		onAfterMove(pokemon, target, move) {
+			if (!move || move.category === 'Status') return;
+			(this.effectState as any).lastMove = move.id;
+		},
+		onResidualOrder: 26,
+		onResidual(pokemon) {
+			if (pokemon.fainted) return;
+			// 33% chance to break free
+			if (this.randomChance(1, 3)) {
+				this.add('-end', pokemon, 'Brainwashed');
+				pokemon.removeVolatile('brainwashed');
+				return;
+			}
+			const moveId = (this.effectState as any).lastMove;
+			if (!moveId) return;
+			const activeMove = this.dex.getActiveMove(moveId); // IMPORTANT: get a mutable ActiveMove copy (Dex move objects are frozen now)
+			if (!activeMove.exists || activeMove.category === 'Status') return;
+			if (activeMove.selfdestruct) return;
+			if (activeMove.target === 'self') return;
+			this.add('-message', `${pokemon.name} lashes out at itself in confusion!`);
+			this.add('-anim', pokemon, activeMove.name, pokemon);
+			const dmg = this.actions.getDamage(pokemon, pokemon, activeMove);
+			if (dmg && dmg !== true) this.damage(dmg as number, pokemon, pokemon, activeMove);
+		},
+	},
+
+	frenzy: {
+		name: "Frenzy",
+		durationCallback(pokemon) {
+			return this.randomChance(1, 2) ? 2 : 3;
+		},
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Frenzy');
+			this.add('-anim', pokemon, 'Outrage', pokemon);
+		},
+		onTrapPokemon(pokemon) {
+			pokemon.tryTrap();
+		},
+		onLockMove(pokemon) {
+			return 'bloodfeast';
+		},
+		onResidualOrder: 27,
+		onResidual(pokemon) {
+			this.boost({def: -1, spd: -1}, pokemon);
+		},
+		onEnd(pokemon) {
+			this.add('-end', pokemon, 'Frenzy');
+			pokemon.addVolatile('mustrecharge');
+		},
+	},
+
+	bloodpacka: {
+		name: "Blood Pack A",
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Blood Pack A');
+		},
+		onModifyAtk(atk) {
+			return this.chainModify(2);
+		},
+		onModifySpe(spe) {
+			return this.chainModify(2);
+		},
+		onModifyDamage(damage, source, target, move) {
+			// If the move is not very effective, deal double
+			if (!target || !move) return;
+			const stage = this.dex.getEffectiveness(move.type, target);
+			if (stage < 0) return this.chainModify(2);
+		},
+	},
+
+	bloodpackb: {
+		name: "Blood Pack B",
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Blood Pack B');
+		},
+		onModifyDef(def) {
+			return this.chainModify(2);
+		},
+		onModifySpD(spd) {
+			return this.chainModify(2);
+		},
+		onSourceModifyDamage(damage, source, target, move) {
+			// target is the Blood Pack B holder (defender)
+			if (!move) return;
+			const stage = this.dex.getEffectiveness(move.type, target);
+			if (stage > 0) return this.chainModify(0.5);
+		},
+		onModifyDamage(damage, source, target, move) {
+			if (!move) return;
+			const stage = this.dex.getEffectiveness(move.type, target);
+			if (stage > 0) return this.chainModify(0.5);
+		},
+	},
+
+	bloodpackab: {
+		name: "Blood Pack AB",
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Blood Pack AB');
+		},
+		// No weaknesses: turn super-effective into neutral
+		onEffectiveness(typeMod, target, type, move) {
+			if (typeMod > 0) return 0;
+		},
+		onDamage(damage, target, source, effect) {
+			if (effect && effect.effectType !== 'Move') {
+				return false;
+			}
+		},
+		onResidual(pokemon) {
+			this.heal(Math.floor(pokemon.maxhp / 4), pokemon);
+		},
+		onModifyPriority(priority, pokemon, target, move) {
+			if (move?.category === 'Status') return priority + 1;
+		},
+	},	
 	// Trey
 	deltadrop: {
 		name: "Delta Drop",
