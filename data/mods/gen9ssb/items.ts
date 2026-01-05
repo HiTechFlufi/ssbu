@@ -1073,7 +1073,8 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		name: "Slag",
 		spritenum: 34,
 		gen: 9,
-		desc: "Serves no purpose. Gets slippery sometimes.",
+		desc: "If held by a Meltan, this Pokemon's attacking moves have a 30% chance to fail.",
+		shortDesc: "Meltan: Attacks have 30% chance to fail.",
 		onTryMove(pokemon, target, move) {
 			if (this.randomChance(3, 10)) {
 
