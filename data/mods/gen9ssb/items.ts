@@ -193,7 +193,7 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		desc: "This Pokemon's stats are 1.25x, including HP. Whenever this Pokemon lands a critical hit, it recovers 1/4 of its max HP. At the end of each turn, this Pokemon is cured of any present status conditions.",
 		onTakeItem: false,
 		onStart(pokemon) {
-			if (pokemon.itemState.zhuyouActivated) return;
+			if (pokemon.m.zhuyouActivated) return;
 			this.add('-activate', pokemon, 'item: Zhuyou');
 			this.add('-message', `${pokemon.name}'s maximum HP increased!`);
 			const newHp = Math.ceil(pokemon.hp * 1.25);
@@ -202,7 +202,7 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 			pokemon.maxhp = newMaxHp;
 			pokemon.baseMaxhp = newMaxHp;
 			this.add('-heal', pokemon, pokemon.getHealth, '[silent]');
-			pokemon.itemState.zhuyouActivated = true;
+			pokemon.m.zhuyouActivated = true;
 		},
 		onModifySpD(spd, pokemon) {
 			return this.chainModify(1.25);
@@ -367,7 +367,7 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		name: "Hadean Soil",
 		gen: 9,
 		onStart(pokemon) {
-			if (pokemon.itemState.soilActivated) return;
+			if (pokemon.m.soilActivated) return;
 			this.add('-activate', pokemon, 'item: Hadean Soil');
 			this.add('-anim', pokemon, 'Sand Attack', pokemon);
 			this.add('-message', `${pokemon.name}'s maximum HP increased!`);
@@ -377,7 +377,7 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 			pokemon.maxhp = newMaxHp;
 			pokemon.baseMaxhp = newMaxHp;
 			this.add('-heal', pokemon, pokemon.getHealth, '[silent]');
-			pokemon.itemState.soilActivated = true;
+			pokemon.m.soilActivated = true;
 		},
 		onTryHit(pokemon, source, move) {
 			if (pokemon !== source && move.type === 'Ground' || move.type === 'Rock') {
