@@ -212,6 +212,12 @@ export const ssbSets: SSBSets = {
 		signatureMove: 'Turbocharge',
 		evs: { hp: 128, spa: 128, spe: 252 }, nature: 'Hasty',
 	},
+	Shigeki: {
+		species: 'Gligar', ability: 'Hemolust', item: 'Blood Packs', gender: 'M',
+		moves: ['Glare', 'Leech Life', 'Psychic Fangs'],
+		signatureMove: 'Bloodfeast',
+		evs: { hp: 96, atk: 196, spe: 216 }, nature: 'Jolly', shiny: true,
+	},	
 	'Suika Ibuki': {
 		species: 'Ogerpon', ability: 'Density Manipulation', item: 'Ibuki Gourd', gender: 'F',
 		moves: ['Pursuit', 'Switcheroo', 'Drain Punch'],
