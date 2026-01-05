@@ -718,6 +718,10 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		accuracy: 100,
 		gen: 9,
 		pp: 10,
+		priority: 0,
+		onModifyPriority(priority, source) {
+			if (source.item === 'giftsack' && source.m?.sack?.length) return priority - 1;
+		},
 		onTryMove() {
 			this.attrLastMove('[still]');
 		},
@@ -726,16 +730,17 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			this.add('-anim', source, 'Present', target);
 		},
 		onHit(target, source, move) {
-			let effectPool = ['miracleeye', 'aquaring', 'focusenergy', 'helpinghand', 'ingrain', 'laserfocus', 'magnetrise', 'substitute', 'stockpile', 'charge', 'destinybond', 'dragoncheer', 'lockon'];
-			let randomEffect = this.sample(effectPool);
+			const effectPool = [
+				'miracleeye','aquaring','focusenergy','helpinghand','ingrain','laserfocus',
+				'magnetrise','substitute','stockpile','charge','destinybond','dragoncheer','lockon'
+			];
+			const randomEffect = this.sample(effectPool);
 			if (!source.volatiles[randomEffect]) source.addVolatile(randomEffect);
 			const stats: BoostID[] = [];
 			let stat: BoostID;
-			for (stat in target.boosts) {
+			for (stat in source.boosts) {
 				if (stat === 'accuracy' || stat === 'evasion') continue;
-				if (target.boosts[stat] < 6) {
-					stats.push(stat);
-				}
+				if (source.boosts[stat] < 6) stats.push(stat);
 			}
 			if (stats.length) {
 				const randomStat = this.sample(stats);
@@ -743,10 +748,12 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				boost[randomStat] = 1;
 				this.boost(boost, source);
 			}
+			if (!source.m) source.m = {} as any;
 			if (!source.m.sack) source.m.sack = [];
 			if (source.m.sack.length) {
 				for (const storedMove of source.m.sack) {
-					this.actions.useMove(storedMove, source, target);
+					const m = this.dex.moves.get(storedMove);
+					if (m?.exists) this.actions.useMove(m.id, source, target);
 				}
 				source.m.sack = [];
 				this.add('-message', `${source.name} emptied its Gift Sack!`);
@@ -1294,45 +1301,89 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		basePower: 60,
 		category: "Special",
 		name: "Genesis Ray",
-		desc: "Traps the target in Genesis Ray, dealing a second hit with double damage if the target uses a contact move or switches, then ending.",
-		shortDesc: "Traps the target in Genesis Ray.",
+		desc: "After hitting, encases the target for 2 turns (cannot stack). If the encased Pokemon uses a contact move or switches out, Genesis Ray triggers for a second hit at double the original damage, then ends.",
+		shortDesc: "Encases target; contact or switching triggers 2x damage hit.",
 		gen: 9,
 		pp: 10,
 		priority: 0,
-		flags: { mirror: 1, protect: 1 },
+		flags: {mirror: 1, protect: 1},
+		type: "Steel",
+		target: "normal",
+		secondary: null,
+		volatileStatus: 'genesisray',
 		onTryMove() {
 			this.attrLastMove('[still]');
 		},
-		onPrepareHit(target, source, move) {
+		onPrepareHit(target, source) {
 			this.add('-anim', source, 'Terrain Pulse', target);
 		},
-		onHit(target, source, move) {
+		onTryHit(target) {
+			if (target.volatiles['genesisray']) {
+				this.add('-message', `${target.name} is already encased by Genesis Ray!`);
+				return null;
+			}
+		},
+		onHit(target) {
 			this.add('-message', `${target.name} was encased by Genesis Ray!`);
 		},
-		onDamage(damage, target, source, effect) {
-			target.m.grDamage = damage * 2;
-		},
-		volatileStatus: 'genesisray',
 		condition: {
 			duration: 2,
-			onTryMove(pokemon, target, move) {
-				if (move.flags['contact']) {
-					this.add('-anim', pokemon, 'Terrain Pulse', pokemon);
-					this.damage(pokemon.m.grDamage, pokemon);
-					this.add('-message', `${pokemon.name} was assaulted by Genesis Ray!`);
-					pokemon.removeVolatile('genesisray');
-				}
+			onStart(pokemon, source) {
+				(this.effectState as any).source = source;
+				(this.effectState as any).triggered = false;
 			},
+			// Detonate BEFORE the encased mon uses a contact move
+			onBeforeMove(pokemon, target, move) {
+				if (!move?.flags?.contact) return;
+				const es: any = this.effectState;
+				if (es.triggered) return;
+				es.triggered = true;
+				const src: Pokemon | undefined = es.source;
+				const blastMove: any = {
+					id: 'genesisrayblast',
+					name: 'Genesis Ray',
+					accuracy: true,
+					basePower: 120,
+					category: 'Special',
+					priority: 0,
+					flags: {protect: 1, mirror: 1},
+					type: 'Steel',
+					effectType: 'Move',
+				};
+				this.add('-anim', src || pokemon, 'Terrain Pulse', pokemon);
+				const dmg = (this as any).getDamage
+					? (this as any).getDamage(src || pokemon, pokemon, blastMove)
+					: (this.actions as any).getDamage(src || pokemon, pokemon, blastMove);
+				if (dmg) this.damage(dmg, pokemon, src, blastMove);
+				this.add('-message', `${pokemon.name} was assaulted by Genesis Ray!`);
+				pokemon.removeVolatile('genesisray');
+			},
+			// Detonate when the encased mon switches out (including most forced-switch flows)
 			onSwitchOut(pokemon) {
-				this.add('-anim', pokemon, 'Terrain Pulse', pokemon);
-				this.damage(pokemon.m.grDamage, pokemon);
+				const es: any = this.effectState;
+				if (es.triggered) return;
+				es.triggered = true;
+				const src: Pokemon | undefined = es.source;
+				const blastMove: any = {
+					id: 'genesisrayblast',
+					name: 'Genesis Ray',
+					accuracy: true,
+					basePower: 120,
+					category: 'Special',
+					priority: 0,
+					flags: {protect: 1, mirror: 1},
+					type: 'Steel',
+					effectType: 'Move',
+				};
+				this.add('-anim', src || pokemon, 'Terrain Pulse', pokemon);
+				const dmg = (this as any).getDamage
+					? (this as any).getDamage(src || pokemon, pokemon, blastMove)
+					: (this.actions as any).getDamage(src || pokemon, pokemon, blastMove);
+				if (dmg) this.damage(dmg, pokemon, src, blastMove);
 				this.add('-message', `${pokemon.name} was assaulted by Genesis Ray!`);
 				pokemon.removeVolatile('genesisray');
 			},
 		},
-		secondary: null,
-		target: "normal",
-		type: "Steel",
 	},
 	// Aevum
 	temporalterrain: {
@@ -1374,13 +1425,29 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 							basePower: 150,
 							category: "Special",
 							priority: 0,
-							flags: { recharge: 1, metronome: 1, futuremove: 1 },
+							flags: {recharge: 1, metronome: 1, futuremove: 1},
 							ignoreImmunity: false,
 							effectType: 'Move',
 							type: 'Dragon',
 						},
 					});
-					this.add('-anim', target, 'Cosmic Power', target)
+					const chipMove: any = {
+						id: 'temporalfreezingglare',
+						name: 'Freezing Glare',
+						accuracy: true,
+						basePower: 90,
+						category: 'Special',
+						priority: 0,
+						flags: {protect: 1},
+						type: 'Psychic',
+						effectType: 'Move',
+					};
+					this.add('-anim', source, 'Freezing Glare', target);
+					this.add('-anim', target, 'Cosmic Power', target);
+					const dmg = (this as any).getDamage
+						? (this as any).getDamage(source, target, chipMove)
+						: (this.actions as any).getDamage(source, target, chipMove);
+					if (dmg) this.damage(dmg, target, source, chipMove);
 					this.add('-message', `Freezing Glare was consumed by the Temporal Terrain!`);
 					this.add('-start', source, 'move: Roar of Time', '[silent]');
 					return this.NOT_FAIL;
@@ -1396,14 +1463,20 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			},
 			onHit(target, source, move) {
 				if (move.id === 'roaroftime' && move.flags['futuremove']) {
-					this.add('-fieldend', 'move: Temporal Terrain', '[silent]');
-					this.add('-anim', source, 'Cosmic Power', source);
-					this.add('-anim', source, 'Roar of Time', target);
 					this.effectState.rotHit = true;
+					// Force all actives to switch (your existing synergy with Genesis Ray)
 					for (const pokemon of this.getAllActive()) {
 						pokemon.forceSwitchFlag = true;
 					}
+					this.add('-anim', source, 'Cosmic Power', source);
+					this.add('-anim', source, 'Roar of Time', target);
 					this.add('-message', `Freezing Glare was unleashed from Temporal Terrain as Roar of Time!`);
+					// ✅ Actually end the terrain NOW
+					if ((this.field as any).clearTerrain) {
+						(this.field as any).clearTerrain();
+					} else {
+						this.field.setTerrain('');
+					}
 				}
 			},
 			onTrapPokemon() {
@@ -2617,6 +2690,93 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		target: "normal",
 		type: "Fairy",
 	},
+	// Shigeki
+	bloodfeast: {
+		name: "Bloodfeast",
+		category: "Physical",
+		gen: 9,
+		basePower: 80,
+		accuracy: 100,
+		pp: 10,
+		priority: 0,
+		flags: {protect: 1, contact: 1, bite: 1, metronome: 1},
+		type: "Dark",
+		target: "normal",
+		shortDesc: "1.3x vs Bleeding. If used on Bleeding in consecutive turns, user enters Frenzy.",
+		desc: "Deals 1.3x damage to Bleeding targets. If the user hits a Bleeding target with Bloodfeast on consecutive turns, the user enters Frenzy. While under Illusion, this move has +1 priority and a high crit rate.",
+		onTryMove() {
+			this.attrLastMove('[still]');
+		},
+		onPrepareHit(target, source) {
+			this.add('-anim', source, 'Jaw Lock', target);
+		},
+		onBasePower(basePower, source, target, move) {
+			if (target?.volatiles?.bleeding) {
+				return this.chainModify([5325, 4096]); // 1.3
+			}
+		},
+		onModifyDamage(damage, source, target, move) {
+			if (target?.volatiles?.bleeding) {
+				return this.chainModify([5325, 4096]);
+			}
+		},
+		onModifyPriority(priority, source) {
+			if ((source as any).illusion) return priority + 1;
+		},
+		onModifyCritRatio(critRatio, source) {
+			if ((source as any).illusion) return critRatio + 2;
+		},
+		onAfterHit(target, source, move) {
+			// Trigger Frenzy if this is consecutive Bloodfeast on a Bleeding target
+			if (target?.volatiles['bleeding']) {
+				const lastTurn = (source as any).ssbBloodfeastBleedTurn as number | undefined;
+				if (lastTurn === this.turn - 1 && !source.volatiles['frenzy']) {
+					this.add('-message', `${source.name} hunger consumes him and enters a Frenzy!`);
+					source.addVolatile('frenzy');
+					(source as any).ssbBloodfeastBleedTurn = undefined;
+				} else {
+					(source as any).ssbBloodfeastBleedTurn = this.turn;
+				}
+			} else {
+				(source as any).ssbBloodfeastBleedTurn = undefined;
+			}
+		},
+	},
+	glare: {
+		num: 137,
+		accuracy: 100,
+		basePower: 0,
+		category: "Status",
+		name: "Glare",
+		pp: 30,
+		priority: 0,
+		flags: {protect: 1, reflectable: 1, mirror: 1, metronome: 1},
+		shortDesc: "Paralyzes. If user has Hemolust and target is already paralyzed, Brainwash it instead.",
+		desc: "Paralyzes the target. If the user has Hemolust and the target is already paralyzed, this instead inflicts Brainwashed (Psychic-types are immune).",
+		onTryHit(target, source, move) {
+			// Shigeki tech: Paralyzed target -> Brainwash instead of failing
+			if (source.hasAbility('hemolust') && target.status === 'par') {
+				if (target.hasType('Psychic')) {
+					this.add('-immune', target);
+					return this.NOT_FAIL;
+				}
+				if (!target.volatiles['brainwashed']) {
+					target.addVolatile('brainwashed', source);
+					this.add('-anim', source, 'Hypnosis', target);
+					this.add('-message', `${target.name} was brainwashed!`);
+				}
+				return this.NOT_FAIL; // IMPORTANT: prevents the "Already Paralyzed" fail path
+			}
+			if (target.status) return false;
+		},
+		onHit(target, source, move) {
+			// Only paralyze if we didn't brainwash above
+			if (source.hasAbility('hemolust') && target.status === 'par') return;
+			target.trySetStatus('par', source, move);
+		},
+		type: "Normal",
+		target: "normal",
+	},	
 	// Prince Smurf
 	youfilthypeasant: {
 		accuracy: 100,

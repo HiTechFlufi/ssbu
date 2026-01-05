@@ -154,7 +154,7 @@ export const ssbSets: SSBSets = {
 	},
 	Pablo: {
 		species: 'Smeargle', ability: 'Artist Block', item: 'Sketchbook', gender: 'M',
-		moves: ['Sketch', 'Copycat', 'Assist'],
+		moves: ['Sketch', 'Copycat', 'Me First'],
 		signatureMove: 'Plagiarize',
 		evs: { hp: 252, spe: 252, spa: 4 }, nature: 'Naive',
 	},
@@ -166,9 +166,9 @@ export const ssbSets: SSBSets = {
 	},
 	'Prince Smurf': {
 		species: 'Kecleon', ability: 'Quick Camo', item: 'Smurf\'s Crown', gender: 'M',
-		moves: ['Psyshield Bash', 'Drain Punch', 'Comeuppance'],
+		moves: ['Retaliate', 'Drain Punch', 'Temper Flare'],
 		signatureMove: 'You Filthy Peasant',
-		evs: { hp: 252, def: 196, spd: 60 }, nature: 'Careful',
+		evs: { hp: 252, atk: 196, spd: 60 }, nature: 'Brave',
 	},
 	Quetzalcoatl: {
 		species: 'Zapdos', ability: 'Peal of Thunder', item: 'Leftovers', gender: 'N',
@@ -212,6 +212,12 @@ export const ssbSets: SSBSets = {
 		signatureMove: 'Turbocharge',
 		evs: { hp: 128, spa: 128, spe: 252 }, nature: 'Hasty',
 	},
+	Shigeki: {
+		species: 'Gligar', ability: 'Hemolust', item: 'Blood Packs', gender: 'M',
+		moves: ['Glare', 'Leech Life', 'Psychic Fangs'],
+		signatureMove: 'Bloodfeast',
+		evs: { hp: 96, atk: 196, spe: 216 }, nature: 'Jolly', shiny: true,
+	},	
 	'Suika Ibuki': {
 		species: 'Ogerpon', ability: 'Density Manipulation', item: 'Ibuki Gourd', gender: 'F',
 		moves: ['Pursuit', 'Switcheroo', 'Drain Punch'],

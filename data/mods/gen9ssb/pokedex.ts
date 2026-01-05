@@ -25,6 +25,12 @@ export const Pokedex: { [k: string]: ModdedSpeciesData } = {
 		abilities: { 0: "Murderous Mimic" },
 		baseStats: { hp: 115, atk: 120, def: 85, spa: 30, spd: 65, spe: 108 },
 	},
+	gligar: {
+		inherit: true,
+		types: ['Dark', 'Bug'],
+		abilities: { 0: "Hemolust" },
+		baseStats: { hp: 85, atk: 75, def: 105, spa: 35, spd: 65, spe: 85 },
+	},	
 	ogerpon: {
 		inherit: true,
 		types: ['Fighting', 'Rock'],
