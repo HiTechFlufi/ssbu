@@ -210,6 +210,88 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			},
 		},
 	},
+	// Shigeki
+	hemolust: {
+		name: "Hemolust",
+		gen: 9,
+		shortDesc: "Dark/Bug. Illusion. 0.75x dmg taken while disguised. Contact: 30% Bleeding. Glare vs already-par -> Brainwashed. Restock Blood Packs on switch if empty.",
+		desc: "This Pokemon becomes Dark/Bug. It disguises itself as the last unfainted Pokemon in its party until hit by a damaging move. While disguised, it takes 25% less damage. Its contact moves have a 30% chance to inflict Bleeding (Ghost immune). If it uses Glare on an already-paralyzed target, it inflicts Brainwashed (Psychic immune). Bite moves drain 50% (25% in Frenzy). If it has no item, it gains Blood Packs when switching out.",
+		onStart(pokemon) {
+			pokemon.setType(['Dark', 'Bug']);
+			this.add('-start', pokemon, 'typechange', 'Dark/Bug', '[from] ability: Hemolust');
+			this.effectState.glareWasAlreadyPar = false;
+		},
+		// Set disguise when coming in
+		onBeforeSwitchIn(pokemon) {
+			let illusion: Pokemon | null = null;
+			for (let i = pokemon.side.pokemon.length - 1; i >= 0; i--) {
+				const p = pokemon.side.pokemon[i];
+				if (!p.fainted && p !== pokemon) { illusion = p; break; }
+			}
+			if (illusion) {
+				(pokemon as any).illusion = illusion;
+				this.add('-activate', pokemon, 'ability: Hemolust', '[illusion]');
+			}
+		},
+		// 25% less damage taken while illusion is active
+		onSourceModifyDamage(damage, source, target, move) {
+			if ((target as any).illusion) return this.chainModify([3072, 4096]); // 0.75
+		},
+		onModifyDamage(damage, source, target, move) {
+			if ((target as any).illusion) return this.chainModify([3072, 4096]); // safety hook
+		},
+		// BREAK disguise when hit by a damaging move
+		onDamagingHit(damage, target, source, move) {
+			if (!(target as any).illusion) return;
+			(target as any).illusion = null;
+			const details = (target as any).getUpdatedDetails();
+			this.add('replace', target, details);
+			this.add('-end', target, 'Illusion');
+			this.add('-message', `${target.name}'s illusion faded!`);
+		},
+		// Record whether the Glare target was already paralyzed BEFORE the move lands
+		onTryHit(target, source, move) {
+			if (move?.id === 'glare') {
+				this.effectState.glareWasAlreadyPar = (target.status === 'par');
+			}
+		},
+		onModifyMove(move, pokemon) {
+			if (move?.flags?.bite && move.category !== 'Status') {
+				if (!move.drain) {
+					move.drain = pokemon.volatiles['frenzy'] ? [1, 4] : [1, 2];
+				} else if (pokemon.volatiles['frenzy']) {
+					move.drain = [1, 4];
+				}
+			}
+		},
+		onAfterMoveSecondarySelf(source, target, move) {
+			if (!target || target.fainted) return;
+			if (move?.flags?.contact && !target.hasType('Ghost')) {
+				if (this.randomChance(3, 10) && !target.volatiles['bleeding']) {
+					target.addVolatile('bleeding', source);
+					this.add('-message', `${target.name} starts bleeding!`);
+				}
+			}
+			if (move?.id === 'glare') {
+				if (this.effectState.glareWasAlreadyPar && target.status === 'par' && !target.hasType('Psychic')) {
+					if (!target.volatiles['brainwashed']) {
+						target.addVolatile('brainwashed', source);
+						this.add('-anim', source, 'Hypnosis', target);
+						this.add('-message', `${target.name} was brainwashed!`);
+					}
+				}
+				this.effectState.glareWasAlreadyPar = false;
+			}
+		},
+		onSwitchOut(pokemon) {
+			// Clear disguise on leave
+			if ((pokemon as any).illusion) (pokemon as any).illusion = null;
+			if (!pokemon.item && pokemon.species.id === 'gligar' && !pokemon.fainted) {
+				pokemon.setItem('bloodpacks');
+				this.add('-item', pokemon, 'Blood Packs', '[from] ability: Hemolust');
+			}
+		},
+	},	
 	// Cinque
 	cheerleader: {
 		name: "Cheerleader",
