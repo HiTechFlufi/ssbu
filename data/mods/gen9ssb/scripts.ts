@@ -524,8 +524,12 @@ export const Scripts: ModdedBattleScriptsData = {
 			action.target.sethp(action.target.maxhp / 2);
 			this.add('-heal', action.target, action.target.getHealth, '[from] move: Revival Blessing');
 			action.pokemon.side.removeSlotCondition(action.pokemon, 'revivalblessing');
+			// If used by a pokemon with Generosity, it should faint afterwards
+			if (action.pokemon.ability === 'generosity') {
+				action.pokemon.faint();
+				//this.battle.damage(action.pokemon.hp, action.pokemon, action.pokemon, this.dex.abilities.get('generosity'), true);
+			}
 			break;
-		// @ts-expect-error I'm sorry but it takes a lot
 		case 'epipen':
 			let newHP = action.target.hp + (action.target.maxhp * 0.75);
 			if (newHP > action.target.maxhp) newHP = action.target.maxhp;

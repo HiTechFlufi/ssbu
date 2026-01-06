@@ -238,11 +238,21 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		shortDesc: "Swaps foe's strongest move; Stores 1 Special; Full sack clashes back.",
 		desc: "Replaces the target's strongest attacking move with another random move on switch-in. If this Pokemon is hit by a Special attack while the sack is empty, it stores the move and takes no damage. If the sack is full, Special attacks deal reduced damage based on base power difference, and the stored move is fired back after the hit, emptying the sack.",
 		onStart(pokemon) {
+
+			// Initiate Gift Sack functionality
+
+			// It's safe to always just set this to an empty array if it's falsy, because
+			// in any scenario that the sack variable is returning false, it should be [], if it isn't already.
+
+			if (!pokemon.m.sack) pokemon.m.sack = [];
+
+			// Find and replace opposing Pokemon's strongest attacking move
+
 			let max = 0;
 			let strongestMove: Move | undefined;
 			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
 			if (!target) return;
-			// Find opposing Pokemon's strongest attack
+
 			for (const moveSlot of target.moveSlots) {
 				const move = this.dex.moves.get(moveSlot.move);
 				if (!move || move.category === 'Status' || !move.basePower) continue;
@@ -251,6 +261,7 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 					strongestMove = move;
 				}
 			}
+
 			if (!strongestMove) return;
 			const moveIndex = target.moves.indexOf(strongestMove.id);
 			if (moveIndex < 0) return;
@@ -260,6 +271,7 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 				(m.flags['metronome'])
 			));
 			if (!allMoves.length) return;
+
 			const randomMove = this.sample(allMoves);
 			target.moveSlots[moveIndex] = {
 				move: randomMove.name,
@@ -271,6 +283,7 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 				used: false,
 				virtual: true,
 			};
+
 			this.add('-activate', pokemon, 'item: Gift Sack');
 			this.add('-anim', pokemon, 'Present', target);
 			this.add('-anim', target, 'Tickle', target);
@@ -279,7 +292,6 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		onTryHit(pokemon, source, move) {
 			if (pokemon === source) return;
 			if (!move || move.category !== 'Special') return;
-			if (!pokemon.m) pokemon.m = {} as any;
 			if (!pokemon.m.sack) pokemon.m.sack = [];
 			if (!pokemon.m.sack.length) {
 				this.add('-anim', pokemon, 'Present', pokemon);

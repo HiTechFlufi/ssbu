@@ -470,18 +470,6 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		flags: {},
 		desc: "Present becomes Ice-type/Special + Gives Charcoal; Life Dew heals unfainted party members 1/4 max HP; On switch out, summons Lucky Chant and cures allies of all status conditions. Upon fainting, summons Revival Blessing and grants permanent Helping Hand to all party members.",
 		shortDesc: "See '/ssb Saint Deli' for more!",
-		onUpdate(pokemon) {
-			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
-			if (this.effectState.revivalBlessing && !pokemon.m.rbProc) {
-				pokemon.m.rbProc = true;
-				this.effectState.revivalBlessing = false;
-				this.effectState.killMe = true;
-				this.actions.useMove('Revival Blessing', pokemon);
-			}
-		},
-		onResidual(pokemon) {
-			if (this.effectState.killMe) pokemon.faint();
-		},
 		onModifyMove(move, pokemon) {
 			if (move.id === 'present') {
 				move.type = 'Ice';
@@ -510,6 +498,23 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 				};
 			}
 		},
+		onDamage(damage, target, source, effect) {
+			if (!target.m.sack) target.m.sack = [];
+			const move = this.dex.moves.get(effect.id);
+			const willTrigger = move.category === 'Special' && !target.m.sack.length
+			if (willTrigger || !move || target === source) return;
+			// if rbTriggered is true, that means Revival Blessing is queued and waiting to happen.
+			// Using this to avoid further damage from shenanigans, such as Zeeb's Slingshot
+			if (this.effectState.rbTriggered) return false;
+			if (damage >= target.hp) {
+				if (!this.effectState.rbTriggered) {
+					this.effectState.rbTriggered = true;
+					this.add('-activate', target, this.dex.abilities.get('generosity'));
+					this.actions.useMove('Revival Blessing', target);
+				}
+				return false;
+			}
+		},
 		onSwitchOut(pokemon) {
 			pokemon.side.addSideCondition('luckychant');
 			let success = false;
@@ -518,36 +523,9 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 				if (ally.status) ally.cureStatus();
 			}
 		},
-		onDamage(damage, target, source, effect) {
-			if (effect?.effectType === 'Move' && target !== source && damage >= target.hp) {
-				const move = this.dex.moves.get(effect.id);
-				if (move.category === 'Special' && target.m.sack) {
-					// Using this to escape from onDamage if being hit in a scenario
-					// where Gift Sack will activate. Without this, Generosity will
-					// see incoming damage, trigger Revival Blessing, then no damage
-					// will be taken due to Gift Sack, giving you a free Revival Blessing.
-					if (target.m.sack.length < 3) return;
-				}
-				this.effectState.revivalBlessing = true;
-				return target.hp - 1;
-			}
-		},
-		onTryHit(target, source, move) {
-			// @ts-ignore
-			const damage = this.actions.getDamage(source, target, move);
-			if (!damage) return;
-			if (move.category === 'Special' && target.m.sack) {
-				// Break from onTryHit if the target has Gift Sack and if it has less than 3 moves in it.
-				// This is because the Gift Sack will absorb the move and nullify damage, meaning we
-				// do not want Revival Blessing to happen.
-				if (target.m.sack.length < 3) return;
-			}
-			if (damage >= target.hp) {
-				this.add('-activate', target, 'ability: Generosity');
-				this.add('-anim', target, 'Confuse Ray', target);
-			}
-		},
 		onFaint(pokemon) {
+			// Automatically applies Helping Hand to next ally that switches in
+			// Handled in .../sim/side.ts
 			pokemon.side.hhBoost = true;
 		},
 	},
