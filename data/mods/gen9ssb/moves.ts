@@ -1391,18 +1391,16 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		basePower: 0,
 		category: "Status",
 		name: "Temporal Terrain",
-		desc: "Traps all Pokemon. Forces all Pokemon to switch upon ending. If a Pokemon uses Freezing Glare during Temporal Terrain, it becomes Roar of Time and hits 2 turns later.",
-		shortDesc: "Traps; Forces all to switch on-end. FrzGlr -> RoT.",
+		desc: "Traps all Pokemon. Forces all Pokemon to switch upon ending. Roar of Time immediately ends the terrain.",
+		shortDesc: "Traps; forces all to switch on-end. Roar of Time ends it early.",
 		pp: 10,
 		priority: 0,
-		flags: { nonsky: 1, metronome: 1 },
+		flags: {nonsky: 1, metronome: 1},
 		terrain: 'temporalterrain',
 		condition: {
 			duration: 5,
 			durationCallback(source, effect) {
-				if (source?.hasItem('terrainextender')) {
-					return 8;
-				}
+				if (source?.hasItem('terrainextender')) return 8;
 				return 5;
 			},
 			onFieldStart(field, source, effect) {
@@ -1412,71 +1410,20 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 					this.add('-fieldstart', 'move: Temporal Terrain');
 				}
 			},
-			onTryMove(source, target, move) {
-				if (move.id === 'freezingglare') {
-					if (!target.side.addSlotCondition(target, 'futuremove')) return false;
-					Object.assign(target.side.slotConditions[target.position]['futuremove'], {
-						move: 'roaroftime',
-						source: source,
-						moveData: {
-							id: 'roaroftime',
-							name: "Roar of Time",
-							accuracy: 90,
-							basePower: 150,
-							category: "Special",
-							priority: 0,
-							flags: {recharge: 1, metronome: 1, futuremove: 1},
-							ignoreImmunity: false,
-							effectType: 'Move',
-							type: 'Dragon',
-						},
-					});
-					const chipMove: any = {
-						id: 'temporalfreezingglare',
-						name: 'Freezing Glare',
-						accuracy: true,
-						basePower: 90,
-						category: 'Special',
-						priority: 0,
-						flags: {protect: 1},
-						type: 'Psychic',
-						effectType: 'Move',
-					};
-					this.add('-anim', source, 'Freezing Glare', target);
-					this.add('-anim', target, 'Cosmic Power', target);
-					const dmg = (this as any).getDamage
-						? (this as any).getDamage(source, target, chipMove)
-						: (this.actions as any).getDamage(source, target, chipMove);
-					if (dmg) this.damage(dmg, target, source, chipMove);
-					this.add('-message', `Freezing Glare was consumed by the Temporal Terrain!`);
-					this.add('-start', source, 'move: Roar of Time', '[silent]');
-					return this.NOT_FAIL;
-				}
-			},
-			onBeforeMovePriority: 2,
-			onBeforeMove(pokemon, target, move) {
-				if (move.id === 'roaroftime' && move.flags['futuremove']) {
-					this.add('-anim', pokemon, 'Cosmic Power', pokemon);
-					this.add('-anim', pokemon, 'Roar of Time', target);
-					this.add('-message', `Freezing Glare was unleashed from Temporal Terrain as Roar of Time!`);
-				}
-			},
+			// Roar of Time ends the terrain immediately (and forces all actives to switch once)
 			onHit(target, source, move) {
-				if (move.id === 'roaroftime' && move.flags['futuremove']) {
-					this.effectState.rotHit = true;
-					// Force all actives to switch (your existing synergy with Genesis Ray)
-					for (const pokemon of this.getAllActive()) {
-						pokemon.forceSwitchFlag = true;
-					}
-					this.add('-anim', source, 'Cosmic Power', source);
-					this.add('-anim', source, 'Roar of Time', target);
-					this.add('-message', `Freezing Glare was unleashed from Temporal Terrain as Roar of Time!`);
-					// ✅ Actually end the terrain NOW
-					if ((this.field as any).clearTerrain) {
-						(this.field as any).clearTerrain();
-					} else {
-						this.field.setTerrain('');
-					}
+				if (!move || move.id !== 'roaroftime') return;
+				this.effectState.rotHit = true;
+				for (const p of this.getAllActive()) {
+					p.forceSwitchFlag = true;
+				}
+				this.add('-activate', source, 'move: Temporal Terrain');
+				this.add('-message', `Roar of Time shattered the Temporal Terrain!`);
+				// end terrain NOW
+				if ((this.field as any).clearTerrain) {
+					(this.field as any).clearTerrain();
+				} else {
+					this.field.setTerrain('');
 				}
 			},
 			onTrapPokemon() {
@@ -2389,6 +2336,48 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		target: "normal",
 		type: "Psychic",
 	},
+	// Toshiro
+	sennenhyoro: {
+		name: "Sennen Hyoro",
+		gen: 9,
+		accuracy: 100,
+		basePower: 90,
+		category: "Physical",
+		type: "Ice",
+		pp: 5,
+		priority: 0,
+		flags: {charge: 1, protect: 1},
+		desc: "Charges for 1 turn, then strikes. Freezes the target for 7 turns (ignores freeze immunity). Can only be used once per switch-in.",
+		shortDesc: "Charge 1 turn. 7T freeze ignoring immunity. 1/use per switch-in.",
+		target: "normal",
+		onTryMove(attacker, defender, move) {
+			if (attacker.removeVolatile('sennenhyorocharge')) {
+				return;
+			}
+			// TURN 1: once per switch-in gate
+			if (attacker.m.sennenUsed) {
+				this.add('-fail', attacker, move);
+				return null;
+			}
+			attacker.m.sennenUsed = true;
+			this.attrLastMove('[still]');
+			this.add('-message', `${attacker.name} is gathering glacial energy!`);
+			this.add('-anim', attacker, 'Haze', attacker);
+			this.add('-anim', attacker, 'Cosmic Power', attacker);
+			if (!this.runEvent('ChargeMove', attacker, defender, move)) return;
+			attacker.addVolatile('twoturnmove', defender);
+			attacker.addVolatile('sennenhyorocharge', defender);
+			return null;
+		},
+		onPrepareHit(target, source) {
+			this.add('-anim', source, 'Freeze Shock', target);
+		},
+		onHit(target, source, move) {
+			(target as any).setStatus('frz', source, move, true);
+			(target.statusState as any).ssbTurns = 7;
+			this.add('-message', `${target.name} was sealed in ice!`);
+		},
+	},	
 	// Quetzalcoatl
 	bigthunder: {
 		accuracy: true,
