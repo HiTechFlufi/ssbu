@@ -146,12 +146,12 @@ export const ssbSets: SSBSets = {
 		signatureMove: 'Complete Darkness',
 		evs: { spa: 252, spd: 4, spe: 252 }, ivs: { atk: 0 }, nature: 'Timid',
 	},
-	Neptune: {
+	/* Neptune: {
 		species: 'Pidgeot-Mega', ability: '???', item: 'Storm Talisman', gender: 'M',
 		moves: ['Hurricane'],
 		signatureMove: 'Golden Order',
 		evs: {}, nature: 'Bashuful',
-	},
+	}, */
 	Pablo: {
 		species: 'Smeargle', ability: 'Artist Block', item: 'Sketchbook', gender: 'M',
 		moves: ['Sketch', 'Copycat', 'Me First'],
@@ -230,6 +230,12 @@ export const ssbSets: SSBSets = {
 		signatureMove: 'Wuji',
 		evs: { hp: 120, atk: 136, spe: 252 }, ivs: { spa: 0 }, nature: 'Jolly',
 	},
+	Toshiro: {
+		species: 'Sandslash-Alola', ability: 'Daiguren Hyorinmaru', item: 'Never-Melt Ice', gender: 'M',
+		moves: ['Icicle Spear', 'Glaive Rush', 'Aqua Cutter'],
+		signatureMove: 'Sennen Hyoro',
+		evs: { hp: 4, atk: 252, spe: 252 }, ivs: { spa: 0 }, nature: 'Jolly',
+	},	
 	Trey: {
 		species: "Decidueye-Hisui", ability: "Concentration", item: "Yoichi's Bow", gender: "M",
 		moves: ["Triple Arrows", "Pursuit", "Trop Kick"],
