@@ -3133,12 +3133,30 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 					}
 					const health = pokemon.maxhp * 0.15;
 					pokemon.hp += health;
-					this.add('-heal', pokemon, pokemon.getHealth);
+					const hpText = (typeof (pokemon as any).getHealth === 'function')
+						? (pokemon as any).getHealth()
+						: (pokemon as any).getHealth;
+
+					this.add('-heal', pokemon, hpText);
 				}
 				if (pokemon.getItem().id === 'zhuyou') {
 					if (pokemon.isActive || !pokemon.status) continue;
 					this.add('-curestatus', pokemon, pokemon.status, '[from] item: Zhuyou');
 					pokemon.clearStatus();
+				}
+				// Daiguren Hyorinmaru: benched Lotus regen
+				if (pokemon.getAbility().id === 'daigurenhyorinmaru') {
+					if (pokemon.fainted || pokemon.isActive) continue;
+					if (pokemon.m.lotus === undefined) pokemon.m.lotus = 12;
+					if ((pokemon.m as any).lotusRegenTurn === this.turn) continue;
+					(pokemon.m as any).lotusRegenTurn = this.turn;
+					if (pokemon.m.lotus < 12) {
+						const oldLotus = pokemon.m.lotus;
+						pokemon.m.lotus++;
+						this.add('-message',
+							pokemon.name + "'s Lotus Flowers: " + oldLotus + " -> " + pokemon.m.lotus + " (benched regen)"
+						);
+					}
 				}
 			}
 			for (const pokemon of this.getAllActive()) {
