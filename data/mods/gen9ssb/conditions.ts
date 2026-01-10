@@ -59,6 +59,40 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 			}
 		},
 	},
+	// Toshiro
+	offfieldfreezetick: {
+		name: "Off-field Freeze Tick",
+		onResidual() {
+			for (const side of this.sides) {
+				for (const p of side.pokemon) {
+					if (!p || p.fainted) continue;
+					// Only manage freezes we applied with our custom timer
+					const turns: number | undefined = p.m?.ssbFreezeTurns;
+					if (p.status !== 'frz') {
+						if (turns !== undefined) delete p.m.ssbFreezeTurns;
+						continue;
+					}
+					if (turns === undefined) continue;
+					p.m.ssbFreezeTurns = turns - 1;
+					// When timer hits 0, thaw even if benched
+					if (p.m.ssbFreezeTurns <= 0) {
+						delete p.m.ssbFreezeTurns;
+						p.cureStatus();
+					}
+				}
+			}
+		},
+	},
+	sennenhyorocharge: {
+		name: "Sennen Hyoro (Charge)",
+		duration: 2,
+		onStart(pokemon) {
+			this.add('-message', `${pokemon.name} is charging Sennen Hyoro!`);
+		},
+		onEnd(pokemon) {
+			this.add('-message', `${pokemon.name} finished charging!`);
+		},
+	},	
 	//Shigeki
 	bleeding: {
 		name: "Bleeding",

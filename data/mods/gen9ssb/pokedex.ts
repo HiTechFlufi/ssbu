@@ -16,6 +16,11 @@ export const Pokedex: { [k: string]: ModdedSpeciesData } = {
 		types: ['Grass', 'Steel'],
 		abilities: { 0: "Temporal Domain" },
 	},
+	sandslashalola: {
+		inherit: true,
+		types: ['Ice', 'Dragon'],
+		abilities: { 0: "Daiguren Hyorinmaru" },
+	},	
 	skuntank: {
 		inherit: true,
 		abilities: { 0: "Venom Shock" },

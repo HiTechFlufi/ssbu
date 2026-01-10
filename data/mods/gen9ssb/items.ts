@@ -430,113 +430,85 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		name: "Rewind Watch",
 		gen: 9,
 		onTakeItem: false,
-		shortDesc: "Calyrex: Grass/Steel. In Temporal Terrain: +1 prio (first move), 1.25x power, 0.85x dmg taken. Repeating moves get punished. 1x rewinds a KO.",
-		desc: "If held by a Calyrex, the holder becomes Grass/Steel. While Temporal Terrain is active, the holder's damaging moves are 1.25x power, it takes 0.85x damage, and its first damaging move each turn gets +1 priority. If an attacker hits the holder with the same damaging move on consecutive turns, that hit is halved and the attacker loses 1 stage of its attacking stat. Once per battle, if the holder would be knocked out by a move, it survives at 1 HP, then rewinds to full HP, cures status, clears common volatile effects, and resets negative stat drops; the item is consumed.",
+		shortDesc: "Calyrex becomes Grass/Steel. Repeat hits do half damage. Once: survives lethal hit, rewinds state.",
+		desc: "If held by a Calyrex, the holder becomes Grass/Steel. If an attacker hits the holder with the same damaging move on consecutive turns, that hit deals half damage. Once per battle, if the holder would be knocked out by a move, it survives at 1 HP and then rewinds: fully heals, clears all stat changes, status, and volatile statuses, restores PP, and restores its type change; the item is consumed.",
 		onStart(pokemon) {
-			// Calyrex-only typing
-			if (pokemon.baseSpecies.baseSpecies === 'Calyrex' && pokemon.setType(['Grass', 'Steel'])) {
-				this.add('-start', pokemon, 'typechange', 'Grass/Steel', '[from] item: Rewind Watch');
+			if (pokemon.baseSpecies.baseSpecies === 'Calyrex') {
+				(pokemon.m as any).rewindWatchAppliedType = true;
+				if (pokemon.setType(['Grass', 'Steel'])) {
+					this.add('-start', pokemon, 'typechange', 'Grass/Steel', '[from] item: Rewind Watch');
+				}
 			}
-			if (!pokemon.itemState) pokemon.itemState = {};
-			pokemon.itemState.rewindUsed = false;
-			pokemon.itemState.prevAttacker = null;
-			pokemon.itemState.prevMove = '';
-			pokemon.itemState.prevTurn = 0;
-			pokemon.itemState.predictedTurn = 0;
-			pokemon.itemState.predictedAttacker = null;
-			pokemon.itemState.predictedCat = '';
-			pokemon.itemState.tempoTurn = 0;
+			if (!(pokemon.m as any).rewindWatch) (pokemon.m as any).rewindWatch = {};
+			const st: any = (pokemon.m as any).rewindWatch;
+			st.used = false;
+			st.pending = false;
+			st.prevAttacker = null;
+			st.prevMove = '';
+			st.prevTurn = 0;
 		},
-		// ===== Temporal Terrain buffs =====
-		onModifyMove(move, pokemon) {
-			if (!this.field.isTerrain('temporalterrain')) return;
-			if (move.category === 'Status') return;
-			// +1 priority only on first damaging move each turn
-			if (pokemon.itemState.tempoTurn !== this.turn) {
-				move.priority = (move.priority || 0) + 1;
-				pokemon.itemState.tempoTurn = this.turn;
-				this.add('-activate', pokemon, 'item: Rewind Watch');
-				this.add('-anim', pokemon, 'Trick Room', pokemon);
-			}
-		},
-		onBasePowerPriority: 23,
-		onBasePower(basePower, pokemon, target, move) {
-			if (!this.field.isTerrain('temporalterrain')) return;
-			if (move.category === 'Status') return;
-			return this.chainModify([5120, 4096]);
-		},
-		// 0.85x damage taken in Temporal Terrain, plus "repeat punish" check
+		// Repeat punish: same attacker + same damaging move on consecutive turns => half damage
 		onSourceModifyDamage(damage, source, target, move) {
 			if (!move || move.category === 'Status') return;
-			let out = damage;
-			if (this.field.isTerrain('temporalterrain')) {
-				out = this.chainModify([3482, 4096]); // ~0.85
-			}
-			// Repeat punish: same attacker + same move on consecutive turns
-			const st: any = target.itemState;
+			const st: any = (target.m as any).rewindWatch;
+			if (!st) return;
 			if (source && st.prevAttacker === source && st.prevMove === move.id && st.prevTurn === this.turn - 1) {
 				this.add('-activate', target, 'item: Rewind Watch');
 				this.add('-anim', target, 'Future Sight', target);
 				this.add('-message', `${target.name} already saw that coming!`);
-				st.predictedTurn = this.turn;
-				st.predictedAttacker = source;
-				st.predictedCat = move.category;
-				out = this.chainModify(0.5);
+				return this.chainModify(0.5);
 			}
-			return out;
 		},
-		onDamagingHitOrder: 2,
 		onDamagingHit(damage, target, source, move) {
-			target.itemState.prevAttacker = source;
-			target.itemState.prevMove = move.id;
-			target.itemState.prevTurn = this.turn;
-			const st: any = target.itemState;
-			if (st.predictedTurn === this.turn && st.predictedAttacker === source) {
-				if (st.predictedCat === 'Physical') {
-					this.boost({atk: -1}, source, target);
-				} else if (st.predictedCat === 'Special') {
-					this.boost({spa: -1}, source, target);
-				}
-				this.add('-message', `${source.name}'s repetition backfired!`);
-				st.predictedTurn = 0;
-				st.predictedAttacker = null;
-				st.predictedCat = '';
-			}
+			const st: any = (target.m as any).rewindWatch;
+			if (!st || !move) return;
+			st.prevAttacker = source;
+			st.prevMove = move.id;
+			st.prevTurn = this.turn;
 		},
 		onDamage(damage, target, source, effect) {
-			if (target.itemState.rewindUsed) return;
+			const st: any = (target.m as any).rewindWatch;
+			if (!st || st.used) return;
 			if (!effect || effect.effectType !== 'Move') return;
 			if (damage >= target.hp) {
-				target.itemState.rewindUsed = true;
-				target.itemState.rewindPending = true;
+				st.used = true;
+				st.pending = true;
 				this.add('-activate', target, 'item: Rewind Watch');
 				this.add('-anim', target, 'Trick Room', target);
 				return target.hp - 1;
 			}
 		},
 		onAfterMoveSecondary(target, source, move) {
-			if (!target.itemState.rewindPending) return;
-			target.itemState.rewindPending = false;
+			const st: any = (target.m as any).rewindWatch;
+			if (!st || !st.pending) return;
+			st.pending = false;
 			target.useItem();
+			// visuals + full heal
 			this.add('-anim', target, 'Recover', target);
 			this.heal(target.maxhp - target.hp, target, target, 'item: Rewind Watch');
+			// clear ALL stat changes
+			target.clearBoosts();
+			this.add('-clearboost', target);
 			// cure status
-			if (target.status) target.cureStatus();
-			// clear common nasty volatiles (feel free to tweak this list)
-			const clearVols = [
-				'confusion', 'attract', 'taunt', 'torment', 'disable', 'encore',
-				'leechseed', 'yawn', 'partiallytrapped',
-			];
-			for (const v of clearVols) {
-				if (target.volatiles[v]) target.removeVolatile(v);
+			if (target.status) {
+				this.add('-curestatus', target, target.status, '[from] item: Rewind Watch');
+				target.clearStatus();
 			}
-			// reset ONLY negative boosts back to 0
-			const fix: any = {};
-			for (const stat in target.boosts) {
-				const val = (target.boosts as any)[stat];
-				if (val < 0) fix[stat] = -val;
+			// clear ALL volatiles (keep "item:" volatiles, which your format uses for shared items)
+			for (const v in target.volatiles) {
+				if (v.startsWith('item:')) continue;
+				target.removeVolatile(v);
 			}
-			if (Object.keys(fix).length) this.boost(fix, target, target);
+			// restore PP
+			for (const slot of target.moveSlots) {
+				slot.pp = slot.maxpp;
+			}
+			// restore the Calyrex type change (even if Soak/etc happened)
+			if ((target.m as any).rewindWatchAppliedType && target.baseSpecies.baseSpecies === 'Calyrex') {
+				if (target.setType(['Grass', 'Steel'])) {
+					this.add('-start', target, 'typechange', 'Grass/Steel', '[from] item: Rewind Watch');
+				}
+			}
 			this.add('-message', `${target.name} rewound the timeline!`);
 		},
 	},
