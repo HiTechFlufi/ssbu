@@ -3076,23 +3076,29 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		noPPBoosts: true,
 		priority: 0,
 		flags: {},
+		selfdestruct: 'always',
+		sideCondition: 'thehandsresisthim',
 		onTryMove() {
 			this.attrLastMove('[still]');
 		},
 		onPrepareHit(target, source) {
 			this.add('-anim', source, 'Glare', target);
-			this.add('-anim', source, 'Night Shade', target);
-			this.add('-anim', target, 'Hex', target);
+			this.add('-anim', target, 'Dark Void', target);
 		},
 		onHit(target, source, move) {
-			target.side.addSideCondition('curseofthehands', source, move)
+			target.side.addSideCondition('thehandsresisthim', source, move)
 		},
 		condition: {
+			onSideStart(targetSide) {
+				this.add('-sidestart', targetSide, 'The Hands Resist Him', '[silent]');
+				this.add('-message', `The opposing side was cursed!`);
+			},
 			onResidual(pokemon) {
 				this.add('-anim', pokemon, "Spectral Thief", pokemon);
-				this.damage(pokemon.maxhp / 16, pokemon);
+				this.damage(pokemon.maxhp / 16, pokemon, pokemon, this.dex.conditions.get('The Hands Resist Him'));
 			},
 			onTryHeal(damage, target, source, effect) {
+				this.add('-anim', target, 'Tickle', target);
 				this.add('-message', `${target.name} couldn't muster up the strength to heal!`);
 				return false;
 			},
