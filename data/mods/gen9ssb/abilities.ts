@@ -15,6 +15,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 	},
 	*/
 	// Please keep abilities organized alphabetically based on staff member name!
+	//Hooked Doll
 	vindication: {
 		name: "Vindication",
 		gen: 9,
