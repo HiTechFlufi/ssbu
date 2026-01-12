@@ -3175,6 +3175,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
 			const ability = target.getAbility();
 			if (pokemon.abilityState.ran) pokemon.addVolatile('shikigamiran');
+			if (pokemon.m.vindictive) pokemon.addVolatile('vindictive'); //hooked doll thingy
 			if (ability && pokemon.item.id === 'sketchbook') {
 				const effect = 'ability:' + ability.id;
 				pokemon.addVolatile(effect);
@@ -3241,6 +3242,24 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				}
 			}
 		},
+		onFaint(pokemon, source, effect) {
+			if (pokemon.species.id === 'banette') {
+				for (const pokemon of source.side.pokemon) {
+					if (pokemon.m.vindictive) {
+						pokemon.m.vindictive = false;
+						this.add('-message', `Hooked Doll's grudge has faded along with it!`)
+					}
+				}
+			}
+			if (pokemon.species.id === 'banettemega') {
+				for (const pokemon of source.side.pokemon) {
+					if (pokemon.m.vindictive) {
+						pokemon.m.vindictive = false;
+						this.add('-message', `Hooked Doll's grudge has faded along with it!`)
+					}
+				}
+			}
+		}, //hooked doll thingy
 	},
 	{
 		name: "[Gen 9] Monotype Random Battle",

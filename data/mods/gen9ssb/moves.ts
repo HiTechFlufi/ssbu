@@ -41,6 +41,40 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 	},
 	*/
 	// Please keep sets organized alphabetically based on staff member name!
+	// Hooked Doll
+	retribution: {
+		name: "Retribution",
+		category: "Physical",
+		gen: 9,
+		desc: "Damages then switches. If opponent has 'Vindictive', deals double damage, heals 50% of damage dealt.",
+		shortDesc: "Switch-out. 2x power, 50% healing if foe = vindictive.",
+		basePower: 60,
+		accuracy: 100,
+		pp: 10,
+		priority: 0,
+		flags: { protect: 1, metronome: 1, contact: 1 },
+		selfSwitch: true,
+		onTryMove(target, source, move) {
+			//whatever the fuck this does
+			this.attrLastMove('[still]');
+		},
+		onPrepareHit(target, source, move) {
+			//adds a 'hex' animation to the target if they have 'vindictive'
+			this.add ('-anim', source, 'Hex', target);
+			this.add ('-anim', target, 'Shadow Claw', target);
+			if (target.volatiles['vindictive']) {
+				this.add ('-anim', target, 'Hex', target);
+			}
+		},
+		onModifyMove(move, pokemon, target) {
+			//drains 50% of damage dealt if opponent has 'vindictive'
+			if (target.volatiles['vindictive']) {
+				move.drain = [1, 2];
+			}
+		},
+		type: "Ghost",
+		target: 'normal',
+	}, //end of signature move
 	// Graaz
 	wildmagicfrenzy: {
 		name: "Wild Magic Frenzy",

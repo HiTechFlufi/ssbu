@@ -15,6 +15,103 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 	},
 	*/
 	// Please keep abilities organized alphabetically based on staff member name!
+	//Hooked Doll
+	vindication: {
+		name: "Vindication",
+		gen: 9,
+		shortDesc: "When hit: disables, drains PP, inflict vindictive, reduce damage once. When defeated: disable all, locks.",
+		desc: "When hit by a damaging move, disables that move, drain 4 additional PP and inflict vindictive. Reduce damage received by 75% once per switch-in. Disables all opponents moves and locks them in for 1 turn when defeated.",
+		onStart() {
+			this.effectState.damaged = false;
+		},
+		onDamagingHit(damage, target, source, move) {
+			//when pokemon is hit, disables that move, reduces its PP by an additional 4, and inflicts Vindictive if not already inflicted.
+			if (move.isZ && move.basemove) move = this.dex.moves.get(move.baseMove);
+			if (!move.flags['futuremove'] && move.id != 'struggle') {
+				source.addVolatile('disable', this.effectState.target);
+				const ppDeducted = source.deductPP(move.id, 4);
+			}
+			if (!source.volatiles['vindictive']) {
+				source.addVolatile('vindictive');
+				source.m.vindictive = true;	
+				this.add('-message', `Hooked Doll seeks vengeance against ${source.name}!`)
+            }
+			this.effectState.damaged = true;
+		}, //most of that was using a main ssb mon + spite as a base. i deadass forgot cursed body was an ability until writing this lmao		
+		onSourceModifyDamage (damage, source, target, move) {
+			//once per switch in, reduces damage dealt by an attack by 75%
+			if (this.effectState.damaged === false) return this.chainModify(0.25);
+		},
+		onModifyPriority(priority, pokemon, target, move) {
+			//+2 priority on status moves
+			if (move?.category === 'Status') {
+				return priority + 2;
+			}
+		},
+        onFaint(pokemon, source, effect) {
+        if (!source || source.fainted || !effect) return;
+		if (source.volatiles['vindictive']) {
+			source.removeVolatile('vindictive');
+		}
+		if (effect.effectType === 'Move' && source.lastMove) {
+            source.addVolatile('alldisable');
+            this.add('-activate', source, 'ability: Vindication');
+			this.add('-message', `${source.name} has been crippled by Hooked Doll's final grudge.`);
+        }
+  	    },
+    }, //end of pre-mega ability
+    repentance: {
+		name: "Repentance",
+		gen: 9,
+		shortDesc: "When hit: disables and drains PP. Traps, gains priority, ignores accuracy and 1.5x damage vs vindictive mons. Enemy loses vindictive when hit.",
+		desc: "When hit by an attack, disables that move and drains 4 additional PP. When faced with an opponent inflicted with 'Vindictive': traps that opponent, all moves gain +2 priority, bypasses accuracy checks. When damaging an opponent with 'Vindictive', deals 1.5x extra damage and removes 'Vindictive'.",
+		onDamagingHit(damage, target, source, move) {
+			//copy-pasted from above code that disables move and drains pp
+			if (move.isZ && move.basemove) move = this.dex.moves.get(move.baseMove);
+			if (!move.flags['futuremove'] && move.id != 'struggle') {
+				source.addVolatile('disable', this.effectState.target);
+				const ppDeducted = source.deductPP(move.id, 4);
+			}
+		},
+		onFoeTrapPokemon(pokemon) {
+			//traps the opponent if they have vindictive
+			if (!pokemon.hasAbility('repentance') && pokemon.isAdjacent(this.effectState.target) && pokemon.volatiles['vindictive']) {
+				pokemon.tryTrap(true);
+			}
+		},
+		onSourceModifyAccuracy(accuracy, target, source, move) {
+			//checks if the opponent has vindictive, and if they do, hooked doll can't miss
+		    if (target?.volatiles['vindictive']) {
+			    return true;
+	 	    }
+	    },
+		onModifyPriority(priority, source, target, move) {
+			//same as above, but if they have vindictive hooked doll gets +2 priority
+			if (target?.volatiles['vindictive']) {
+			    this.debug('Repentance Boost');
+			    return priority + 2;
+			}
+			if (move?.category === 'Status') {
+				return priority + 2;
+			}
+		},
+		onModifyDamage(damage, source, target, move) {
+			//Deals 1.5x damage against opponents with 'vindictive'
+			if (!target.volatiles['vindictive']) return;
+			this.debug('Repentance Damage');
+			return this.chainModify(1.5);
+		},
+        onAfterMove(source, target, move) {
+			//removes 'vindictive' when attacking a pokemon that has it
+			if (move.category === 'Status') return;
+			if (target.volatiles['vindictive']) {
+			    target.removeVolatile('vindictive');
+				target.m.vindictive = false;
+				this.add('-end', target, 'Vindictive', '[from] ability: Repentance');
+				this.add('-message', `Hooked Doll satisfied its vengeance against ${target.name}.`);
+		    }
+	    },
+	}, //end of post-mega ability
 	// Graaz
 	feralinstinct: {
 		gen: 9,
