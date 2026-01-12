@@ -23,6 +23,72 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 	// Please keep statuses organized alphabetically based on staff member name!
 	// MUST BE MANUALLY SET AND REMOVED IN ALL CASES.
 
+	// Hooked Doll
+	vindictive: {
+		name: "Vindictive",
+		//vindictive volatile status. Doubles PP usage, heal blocks and pokemon takes 10% of the damage they deal back to them
+		onStart(pokemon, source) {
+			this.add('-start', pokemon, 'move: Vindictive');
+			source.moveThisTurnResult = true;
+		},
+		onDisableMove(pokemon) {
+			for (const moveSlot of pokemon.moveSlots) {
+				if (this.dex.moves.get(moveSlot.id).flags['heal']) {
+					pokemon.disableMove(moveSlot.id);
+				}
+			}
+		},
+		onBeforeMovePriority: 6,
+		onBeforeMove(pokemon, target, move) {
+				if (move.flags['heal'] && !move.isZ && !move.isMax) {
+					this.add('cant', pokemon, 'move: Vindictive', move);
+					return false;
+				}
+			    pokemon.deductPP(move);
+			},
+		onModifyMove(move, pokemon, target) {
+			if (move.flags['heal'] && !move.isZ && !move.isMax) {
+				this.add('cant', pokemon, 'move: Vindictive', move);
+				return false;
+			}
+		},
+		onTryHeal(damage, target, source, effect) {
+			if (effect && (effect.id === 'zpower' || (effect as Move).isZ)) return damage;
+			if (source && target !== source && target.hp !== target.maxhp && effect.name === "Pollen Puff") {
+				this.attrLastMove('[still]');
+				// FIXME: Wrong error message, correct one not supported yet
+				this.add('cant', source, 'move: Heal Block', effect);
+				return null;
+			}
+			return false;
+		},
+		onSourceDamagingHit(damage, target, source, move) {
+        this.damage(Math.floor(damage / 5), source, source);
+	    },
+	}, //end of 'Vindictive' volatile status code
+	alldisable: {
+		//volatile that hits you when you kill the base Banette (not mega). Traps and disables all your moves for 1 turn.
+	    name: "All Disable",
+		duration: 2, //end of the turn you killed it counts as 1 turn, so duration is 2 so it ends the turn after.
+		onStart(target) {
+            this.add('-start', target, 'All Disable');
+		},
+		onDisableMove(pokemon) {
+		    for (const moveSlot of pokemon.moveSlots) {
+                if (moveSlot.pp > 0) {
+                    moveSlot.disabled = true;
+                }
+            }
+		},
+		onTrapPokemon(pokemon) {
+			pokemon.tryTrap();
+		},
+        onEnd(target) {
+            this.add('-end', target, 'All Disable');
+			this.add('-message', `Hooked Doll's final grudge wore off!`)
+        },
+    }, //end of all disable
+
 	// Aeri
 	silkendrafts: {
 		name: "Silken Drafts",
