@@ -6,6 +6,14 @@ export const Pokedex: { [k: string]: ModdedSpeciesData } = {
 		baseStats: {hp: 100, atk: 100, def: 100, spa: 100, spd: 100, spe: 100}, // the base stats for the pokemon
 	},
 	*/
+	banette: {
+		inherit: true,
+		abilities: { 0: "Vindication" },
+	},
+	banettemega: {
+		inherit: true,
+		ability: { 0: "Repentance" },
+	},
 	delibird: {
 		inherit: true,
 		types: ['Ice', 'Water'],
