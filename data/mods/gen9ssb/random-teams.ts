@@ -98,6 +98,12 @@ export const ssbSets: SSBSets = {
 		evs: { hp: 224, atk: 252, spe: 32 }, nature: 'Adamant',
 	},
 	*/
+	'Hooked Doll': {
+		species: 'banette', ability: 'Vindication', item: 'Banettite', Gender: 'F',
+		moves: ['Throat Chop', 'Gunk Shot', 'Spite'],
+		signatureMove: 'Retribution',
+		evs: {hp: 252, def: 4, spd: 252 }, nature: 'Impish', shiny: true,
+	},
 	'Kaiser Dragon': {
 		species: 'Rayquaza', ability: 'Elemental Shift', item: 'Leftovers', gender: 'N',
 		moves: ['Splash', 'Celebrate', 'Hold Hands'],
