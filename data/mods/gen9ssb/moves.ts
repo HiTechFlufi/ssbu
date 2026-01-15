@@ -41,6 +41,49 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 	},
 	*/
 	// Please keep sets organized alphabetically based on staff member name!
+	// Mel
+	heartofdarkness: {
+		name: "Heart of Darkness",
+		gen: 9,
+		desc: "Holder's Ghost-type and Dragon-type attacks have 1.3x power. Copies the healing of all direct healing Status moves. Burns the holder if it KOes another Pokémon.",
+		shortDesc: "Ghost and Dragon-type moves 1.3x power, copies healing from Status moves, burns holder after KOes.",
+		onBasePowerPriority: 15,
+		onBasePower(basePower, user, target, move) {
+			if (move && move.type === 'Ghost' || move.type === 'Dragon') {
+				return this.chainModify([5324, 4096]);
+			}
+		},
+		onAfterMoveSecondarySelf(source, target, move) {
+			if (
+				target &&
+				target.fainted &&
+				!source.status
+			) {
+			source.trySetStatus('brn', source);
+				this.add('-message', `${source.name} was set aflame by its Heart of Darkness!`);
+			}
+		},
+	onAnyAfterMove(source, target, move) {
+		const holder = this.effectState.target;
+		if (!holder || holder.fainted) return;
+
+		if (source === holder) return;
+
+		if (
+			move &&
+			move.category === 'Status' &&
+			move.heal
+		) {
+			const [num, den] = move.heal;
+			const healAmount = Math.floor(holder.baseMaxhp * num / den);
+
+		if (healAmount > 0) {
+			this.heal(healAmount, holder);
+			this.add('-message', `${holder.name} copied their opponent's healing!`);
+				}
+			}
+		},
+	},
 	// Hooked Doll
 	retribution: {
 		name: "Retribution",
