@@ -773,7 +773,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 	// Gadget
 	cashgrab: {
 		name: "Cash Grab",
-		desc: "Whenever this Pokemon uses Pay Day or Stockpile, it collects a random number of coins, ranging from 0 to 3x the number of times Pay Day and Stockpile have been used this battle. This Pokemon's weight is multiplied by the number of coins stored.",
+		desc: "Whenever this Pokemon uses Pay Day or Stockpile, it collects 0-30 coins. This Pokemon's weight is multiplied by the number of coins stored.",
 		shortDesc: "Pay Day/Stockpile: Collects coins. Weight scales with coins.",
 		gen: 9,
 		flags: {},
@@ -807,10 +807,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			if (['payday', 'stockpile'].includes(move.id)) {
 				this.add('-activate', source, 'ability: Cash Grab');
 				if (!source.m.coins) source.m.coins = 0;
-				if (!source.m.pdTriggers) source.m.pdTriggers = 0;
-				source.m.pdTriggers++;
-				const gain = this.random((source.m.pdTriggers * 3) + 1);
-				if (!gain) return;
+				const gain = this.random(31);
+				if (gain === 0) return;
 				this.add('-anim', source, 'Pay Day', source);
 				this.add('-anim', source, 'Tickle', source);
 				source.m.coins += gain;
