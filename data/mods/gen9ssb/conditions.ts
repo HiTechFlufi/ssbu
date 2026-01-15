@@ -158,6 +158,55 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 		onEnd(pokemon) {
 			this.add('-message', `${pokemon.name} finished charging!`);
 		},
+	},
+	//Koiru
+	// === Coil Connection shield (Protect + contact burn) ===
+	coilconnection: {
+		name: "Coil Connection",
+		duration: 1,
+		onStart(pokemon) {
+			this.add('-singleturn', pokemon, 'Coil Connection');
+		},
+		onTryHit(target, source, move) {
+			if (!move || move.category === 'Status') return;
+			// protect-style
+			if (move.flags?.bypasssub || move.infiltrates) return;
+			this.add('-activate', target, 'move: Coil Connection');
+			this.add('-anim', target, 'Shift Gear', target);
+			// contact burn
+			if (move.flags?.contact && source && !source.fainted) {
+				source.trySetStatus('brn', target, this.dex.conditions.get('coilconnection'));
+			}
+			return null;
+		},
+	},
+	// === Coil Fusion state (3 turns) ===
+	coilfusion: {
+		name: "Coil Fusion",
+		duration: 3,
+		onStart(pokemon) {
+			// store original typing once
+			if (!pokemon.m.coilOrigTypes) pokemon.m.coilOrigTypes = pokemon.getTypes(true);
+			pokemon.setType(['Electric', 'Fighting']);
+			this.add('-start', pokemon, 'typechange', 'Electric/Fighting', '[from] move: Frostbite Fusion');
+			this.add('-anim', pokemon, 'Collision Course', pokemon);
+			// lock grade at B + mode as fusion
+			pokemon.m.coilMode = 'fusion';
+			pokemon.m.coilGrade = 'B';
+		},
+		onResidual(pokemon) {
+			// purely visual heartbeat so players know it's active
+			this.add('-anim', pokemon, 'Charge', pokemon);
+		},
+		onEnd(pokemon) {
+			// restore type
+			const orig = pokemon.m.coilOrigTypes;
+			if (orig) pokemon.setType(orig);
+			this.add('-message', `${pokemon.name}'s Coil Fusion ended!`);
+			// after fusion, drop to C like your spec vibe, but keep current mode unchanged until next Coil Connection
+			pokemon.m.coilGrade = 'C';
+			if (pokemon.m.coilMode === 'fusion') pokemon.m.coilMode = 'gravity'; // safe fallback
+		},
 	},	
 	// Koiru - Tethers
 	coiltetherspeed: {
