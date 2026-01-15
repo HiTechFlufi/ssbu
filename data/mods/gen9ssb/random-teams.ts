@@ -146,6 +146,12 @@ export const ssbSets: SSBSets = {
 		signatureMove: 'Emergency Meltdown',
 		evs: { hp: 120, atk: 136, spe: 252 }, ivs: { spa: 0 }, nature: 'Jolly',
 	},
+	Mel: {
+		species: 'Giratina-Origin', ability: 'Icy Soul', item: 'Heart of Darkness', gender: 'N',
+		moves: ['Dragon Hammer', 'Close Combat', 'Earthquake'],
+		signatureMove: 'Deep Claw',
+		evs: { hp: 252, atk: 252, spd: 4 }, ivs: {}, nature: 'Brave',
+	},
 	Morax: {
 		species: 'Landorus', ability: 'Herald of Order', item: 'Hadean Soil', gender: 'M',
 		moves: ['Land\'s Wrath', 'Bleakwind Storm', 'Paleo Wave'],
