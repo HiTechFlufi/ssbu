@@ -15,6 +15,38 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 	},
 	*/
 	// Please keep abilities organized alphabetically based on staff member name!
+	// Mel
+	icysoul: {
+		name: "Icy Soul",
+		gen: 9,
+		shortDesc: "This Pokémon loses 1/6th of its maximum HP at the end of the turn unless it is burned.",
+		desc: "This Pokémon loses 1/6th of its maximum HP at the end of the turn unless it is burned.",
+		onStart(pokemon) {
+			pokemon.setType(['Ghost', 'Fighting']);
+			this.add('-start', pokemon, 'typechange', 'Ghost/Fighting', '[from] ability: Icy Soul');
+		},
+		onResidualPriority: 10,
+		onResidual(target) {
+			if (target.status !== 'brn') {
+				this.damage(target.baseMaxhp / 6, target);
+		}
+	},
+
+		onDamage(damage, target, source, effect) {
+			if (effect?.id === 'brn') {
+				return false;
+		}
+	},
+
+		onModifyDamage(damage, source, target, move) {
+			if (
+				source?.status === 'brn' &&
+				move?.category === 'Physical'
+			) {
+				return this.chainModify(2);
+			}
+		},
+	},
 	//Hooked Doll
 	vindication: {
 		name: "Vindication",
