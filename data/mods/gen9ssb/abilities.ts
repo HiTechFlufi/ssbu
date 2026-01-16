@@ -163,6 +163,106 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			if (status.id === 'confusion') return null;
 		},
 	},
+	// Karumonix
+	blackplague: {
+		name: "Black Plague",
+		gen: 9,
+		shortDesc: "Normal/Poison. Opposing status/volatile -> +1 Ratfested. Ratfested switch-out: heal 1/10. Plagued takes dmg: heal 1/8.",
+		desc: "This Pokemon becomes Normal/Poison. Whenever an opposing Pokemon gains a status condition or a volatile status (excluding Ratfested/Plagued), it also gains 1 Ratfested stack. When an opposing Ratfested Pokemon switches out, this Pokemon restores 1/10 of its max HP. Whenever an opposing Plagued Pokemon takes damage, this Pokemon restores 1/8 of its max HP.",
+		onStart(pokemon) {
+			pokemon.setType(['Normal', 'Poison']);
+			this.add('-start', pokemon, 'typechange', 'Normal/Poison', '[silent]');
+		},
+		onAnySetStatus(status, target, source, effect) {
+			const king = this.effectState.target;
+			if (!king || king.fainted || !target || target.fainted) return;
+			if (target.side === king.side) return;
+			if (status.id === 'ratfested' || status.id === 'plagued') return;
+			target.addVolatile('ratfested', king, this.dex.abilities.get('blackplague'));
+		},
+		onAnyTryAddVolatile(status, target, source, effect) {
+			const king = this.effectState.target;
+			if (!king || king.fainted || !target || target.fainted) return;
+			if (target.side === king.side) return;
+			if (status.id === 'ratfested' || status.id === 'plagued') return;
+			target.addVolatile('ratfested', king, this.dex.abilities.get('blackplague'));
+		},
+		// Heal when an opposing Ratfested mon switches out
+		onAnySwitchOut(pokemon) {
+			const king = this.effectState.target;
+			if (!king || king.fainted || !pokemon) return;
+			if (pokemon.side === king.side) return;
+			if (pokemon.volatiles['ratfested']) {
+				this.heal(king.maxhp / 10, king);
+			}
+		},
+		// Heal whenever an opposing Plagued mon takes damage (direct or indirect)
+		onAnyDamage(damage, target, source, effect) {
+			const king = this.effectState.target;
+			if (!king || king.fainted || !target || target.fainted) return;
+			if (damage <= 0) return;
+			if (target.side === king.side) return;
+			if (target.volatiles['plagued']) {
+				this.heal(king.maxhp / 8, king);
+			}
+		},
+	},
+	scoutshonor: {
+		name: "Scouts Honor",
+		gen: 9,
+		shortDesc: "Normal/Poison. Damaging attacks apply 1 Ratfested stack. If would faint, survives at 1 HP and reverts to Karumonix.",
+		desc: "This Pokemon becomes Normal/Poison. This Pokemon's damaging attacks apply 1 Ratfested stack (once per move). If this Pokemon would faint, it instead survives at 1 HP and transforms back into Karumonix Rat King.",
+		onStart(pokemon) {
+			pokemon.setType(['Normal', 'Poison']);
+			this.add('-start', pokemon, 'typechange', 'Normal/Poison', '[silent]');
+			(this.effectState as any).pendingRevert = false;
+			(this.effectState as any).lastApplyTurn = -1;
+			(this.effectState as any).lastApplyMove = '';
+		},
+		// Apply 1 Ratfested stack on damaging attacks (once per move, not per multi-hit)
+		onSourceHit(target, source, move) {
+			if (!move || move.category === 'Status') return;
+			if (!target || target.fainted) return;
+			if (target.side === source.side) return;
+			if ((this.effectState as any).lastApplyTurn === this.turn && (this.effectState as any).lastApplyMove === move.id) return;
+			(this.effectState as any).lastApplyTurn = this.turn;
+			(this.effectState as any).lastApplyMove = move.id;
+			target.addVolatile('ratfested', source, this.dex.abilities.get('scoutshonor'));
+		},
+		// If this would KO the Rat Servant, force it to 1 HP and queue revert
+		onDamage(damage, target, source, effect) {
+			if (damage <= 0) return;
+			if (!target || target.fainted) return;
+			if (damage < target.hp) return;
+			if (!target.m.isRatServant) return;
+			if ((this.effectState as any).pendingRevert) return;
+			(this.effectState as any).pendingRevert = true;
+			this.add('-activate', target, 'ability: Scouts Honor');
+			return target.hp - 1;
+		},
+		onUpdate(pokemon) {
+			if (!(this.effectState as any).pendingRevert) return;
+			if (!pokemon.m.isRatServant) return;
+			if (pokemon.fainted || pokemon.hp !== 1) return;
+			(this.effectState as any).pendingRevert = false;
+			const kingSet = ssbSets['Karumonix Rat King'];
+			if (!kingSet) {
+				this.add('-message', `ERROR: ssbSets['Karumonix Rat King'] not found.`);
+				return;
+			}
+			pokemon.m.isRatServant = false;
+			changeSet(this, pokemon, kingSet, true);
+			const saved = pokemon.m.ratKingHP;
+			if (saved && typeof saved === 'number') {
+				pokemon.hp = Math.min(pokemon.maxhp, Math.max(1, saved));
+			pokemon.name = pokemon.m.ratKingName || pokemon.name;
+			pokemon.details = pokemon.getUpdatedDetails();
+			this.add('replace', pokemon, pokemon.details, pokemon.getHealth, '[silent]');
+			}
+			pokemon.m.ratKingHP = 0;
+			this.add('-message', `${pokemon.name} returns to the Rat King!`);
+		},
+	},	
 	// Roughskull
 	venomshock: {
 		name: "Venom Shock",

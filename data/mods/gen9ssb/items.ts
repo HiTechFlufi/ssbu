@@ -209,6 +209,52 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 			},
 		},
 	},
+	// Karumonix
+	vermincrown: {
+		name: "Vermin Crown",
+		gen: 9,
+		shortDesc: "Immune to Ratfested/Plagued. If KO'd with item intact: foe gets 1 Ratfested. Contacting holder doubles Ratfested damage.",
+		desc: "The holder is immune to Ratfested and Plagued. If the holder faints while still holding this item, the opposing Pokemon gains 1 Ratfested stack. If an opposing Pokemon makes contact with the holder, that opponent's Ratfested/Plagued damage is doubled for a short time.",
+		onStart(pokemon) {
+			if (pokemon.volatiles['plagued']) pokemon.removeVolatile('plagued');
+			if (pokemon.volatiles['ratfested']) pokemon.removeVolatile('ratfested');
+		},
+		// Immune to Ratfested + Plagued being applied
+		onTryAddVolatile(status, target, source, effect) {
+			if (status.id === 'ratfested' || status.id === 'plagued') {
+				this.add('-immune', target, '[from] item: Vermin Crown');
+				return null;
+			}
+		},
+		// Implemented as: if foe uses a contact move INTO holder, mark them for doubled plague ticks.
+		onDamagingHit(damage, target, source, move) {
+			if (!source || source.fainted) return;
+			if (source.side === target.side) return;
+			if (!move?.flags?.contact) return;
+			source.addVolatile('vermincrownmark', target, this.dex.items.get('vermincrown'));
+		},
+		onModifyMove(move, pokemon) {
+			if (move.id === 'populationbomb') {
+				move.accuracy = true;
+			}
+		},
+		onFaint(pokemon) {
+			// Only trigger if item is still actually held/active
+			if (pokemon.ignoringItem()) return;
+			if (pokemon.item !== 'vermincrown') return;
+			const last = pokemon.lastAttackedBy;
+			const attacker = last?.source;
+			if (attacker && !attacker.fainted && attacker.side !== pokemon.side) {
+				for (let i = 0; i < 3; i++) attacker.addVolatile('ratfested', pokemon, this.dex.items.get('vermincrown'));
+				return;
+			}
+			// Fallback: if no clear attacker (hazards/status), tag all opposing actives
+			for (const foe of pokemon.side.foe.active) {
+				if (!foe || foe.fainted) continue;
+				for (let i = 0; i < 3; i++) foe.addVolatile('ratfested', pokemon, this.dex.items.get('vermincrown'));
+			}
+		},
+	},
 	// Koiru
 	fusioncoils: {
 		name: "Fusion Coils",

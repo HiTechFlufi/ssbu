@@ -110,6 +110,18 @@ export const ssbSets: SSBSets = {
 		signatureMove: 'Struggle',
 		evs: { hp: 252, spd: 4, spe: 252 }, nature: 'Hasty', shiny: true,
 	},
+	'Karumonix Rat King': {
+		species: 'Raticate-Alola-Totem', ability: 'Black Plague', item: 'Vermin Crown', gender: 'N',
+		moves: ['Poison Fang', 'Parting Shot', 'Population Bomb'],
+		signatureMove: 'CALL OF THE RAT',
+		evs: { hp: 144, def: 188, spd: 176 }, nature: 'Relaxed', shiny: true,
+	},
+	'Rat Servant': {
+		species: 'Rattata-Alola', ability: 'Scouts Honor', item: 'Eviolite', gender: 'M',
+		moves: ['Quick Attack', 'Hyper Fang', 'Baneful Bunker'],
+		signatureMove: 'Dire Claw',
+		evs: { hp: 4, atk: 252, spe: 252 }, nature: 'Jolly', skip: 'Karumonix Rat King',
+	},	
 	Koiru: {
 		species: 'Zeraora', ability: 'Triple Threat', item: 'Fusion Coils', gender: 'M',
 		moves: ['Fusion Bolt', 'Heat Crash', 'Drain Punch'],

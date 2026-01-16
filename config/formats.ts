@@ -3230,6 +3230,17 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 			const ability = target.getAbility();
 			if (pokemon.abilityState.ran) pokemon.addVolatile('shikigamiran');
 			if (pokemon.m.vindictive) pokemon.addVolatile('vindictive'); //hooked doll thingy
+			const s = pokemon.m.ratfestedStacks || 0;
+			const p = !!pokemon.m.plagued;
+			if (s || p) {
+				pokemon.addVolatile('ratfested');
+				const rat = pokemon.volatiles['ratfested'];
+				if (rat) {
+					if (!(rat as any).effectState) (rat as any).effectState = {};
+					((rat as any).effectState as any).stacks = Math.min(4, p ? 4 : (s || 1));
+				}
+				if (p || s >= 4) pokemon.addVolatile('plagued');
+			}			
 			if (ability && pokemon.item.id === 'sketchbook') {
 				const effect = 'ability:' + ability.id;
 				pokemon.addVolatile(effect);

@@ -159,6 +159,131 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 			this.add('-message', `${pokemon.name} finished charging!`);
 		},
 	},
+	// Karumonix
+	ratfested: {
+		name: "Ratfested",
+		// Stacking volatile: 1-4
+		onStart(pokemon) {
+			(this.effectState as any).stacks = 1;
+			pokemon.m.ratfestedStacks = 1;
+			this.add('-start', pokemon, 'Ratfested');
+		},
+		onRestart(pokemon) {
+			const state = this.effectState as any;
+			state.stacks = Math.min(4, (state.stacks || 1) + 1);
+			pokemon.m.ratfestedStacks = state.stacks;
+			if (state.stacks >= 4) pokemon.m.plagued = true;
+			this.add('-message', `${pokemon.name} is getting jumped by rats! (${state.stacks}/4)`);
+
+			if (state.stacks >= 4 && !pokemon.volatiles['plagued']) {
+				pokemon.addVolatile('plagued', this.effectState.source, this.effectState.effect);
+			}
+		},
+		// 1 stack: end-of-turn 1/16
+		onResidual(pokemon) {
+			const state = this.effectState as any;
+			const stacks = state.stacks || 1;
+			if (stacks >= 1) {
+				this.damage(Math.floor(pokemon.maxhp / 16), pokemon);
+			}
+		},
+		// 2 stacks: on switch out, take 1/8
+		onSwitchOut(pokemon) {
+			const state = this.effectState as any;
+			const stacks = state.stacks || 1;
+			if (stacks >= 2) {
+				this.damage(Math.floor(pokemon.maxhp / 8), pokemon);
+			}
+		},
+		// 3 stacks: special moves deal 25% less damage (excluding AoE and Z/Max)
+		onModifyDamage(damage, source, target, move) {
+			const state = this.effectState as any;
+			const stacks = state.stacks || 1;
+			if (stacks < 3) return;
+			if (!move || move.category !== 'Special') return;
+			if ((move as any).isZ || (move as any).isMax) return;
+			const aoeTargets = new Set([
+				'all', 'allAdjacent', 'allAdjacentFoes', 'allAdjacentAllies', 'foeSide', 'allySide',
+			]);
+			if (aoeTargets.has(move.target)) return;
+			return this.chainModify([3072, 4096]); // 0.75
+		},
+		onSourceModifyDamage(damage, source, target, move) {
+			return (this.dex.conditions.get('ratfested') as any).onModifyDamage!.call(this, damage, source, target, move);
+		},
+		// AoE moves + Rapid Spin reduce a stack by 1 (unless Plagued)
+		onDamagingHit(damage, target, source, move) {
+			if (!move) return;
+			if (target.volatiles['plagued']) return;
+			const aoeTargets = new Set([
+				'all', 'allAdjacent', 'allAdjacentFoes', 'allAdjacentAllies', 'foeSide', 'allySide',
+			]);
+			if (move.id !== 'rapidspin' && !aoeTargets.has(move.target)) return;
+			const state = this.effectState as any;
+			state.stacks = Math.max(0, (state.stacks || 1) - 1);
+			target.m.ratfestedStacks = state.stacks;
+			if (state.stacks < 4) target.m.plagued = false;
+			if (state.stacks <= 0) {
+				this.add('-end', target, 'Ratfested');
+				target.removeVolatile('ratfested');
+				target.m.ratfestedStacks = 0;
+				target.m.plagued = false;
+				return;
+			}
+			this.add('-message', `${target.name}'s cleared off some of the rats! (${state.stacks}/4)`);
+		},
+	},
+	plagued: {
+		name: "Plagued",
+		onStart(pokemon) {
+			pokemon.m.plagued = true;
+			pokemon.m.ratfestedStacks = Math.max(pokemon.m.ratfestedStacks || 0, 4);
+			this.add('-start', pokemon, 'Plagued');
+			// Ensure Ratfested exists and is locked to 4 safely
+			if (!pokemon.volatiles['ratfested']) pokemon.addVolatile('ratfested');
+			const rat = pokemon.volatiles['ratfested'];
+			if (rat) {
+	
+				if (!(rat as any).effectState) (rat as any).effectState = {};
+				((rat as any).effectState as any).stacks = 4;
+			}
+		},
+		onResidual(pokemon) {
+			this.damage(Math.floor(pokemon.maxhp / 8), pokemon);
+		},
+		onEnd(pokemon) {
+			this.add('-end', pokemon, 'Plagued');
+			pokemon.m.plagued = false;
+		},
+	},
+	vermincrownmark: {
+		name: "Vermin Crown Mark",
+		duration: 2,
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Vermin Crown Mark', '[silent]');
+		},
+		onResidual(pokemon) {
+			const isPlagued = !!pokemon.m.plagued || !!pokemon.volatiles['plagued'];
+			const stacks = pokemon.m.ratfestedStacks || 0;
+			if (!isPlagued && stacks <= 0) return;
+			if (isPlagued) {
+				this.damage(Math.floor(pokemon.maxhp / 8), pokemon);
+				return;
+			}
+			// Ratfested stack 1+ normally does 1/16 at EOT
+			this.damage(Math.floor(pokemon.maxhp / 16), pokemon);
+		},
+		onSwitchOut(pokemon) {
+			const stacks = pokemon.m.ratfestedStacks || 0;
+			if (stacks >= 2) {
+				// Ratfested stack 2+ normally does 1/8 on switch-out; add another 1/8
+				this.damage(Math.floor(pokemon.maxhp / 8), pokemon);
+			}
+		},
+		onEnd(pokemon) {
+			this.add('-end', pokemon, 'Vermin Crown Mark', '[silent]');
+		},
+	},	
 	//Koiru
 	// === Coil Connection shield (Protect + contact burn) ===
 	coilconnection: {
@@ -263,7 +388,28 @@ export const Conditions: { [id: IDEntry]: ModdedConditionData & { innateName?: s
 		onEnd(pokemon) {
 			this.add('-end', pokemon, 'Regen Tether');
 		},
-	},	
+	},
+	//Prince Smurf
+	dynamicshiftshield: {
+		name: "Dynamic Shift",
+		duration: 1,
+		onStart(pokemon) {
+			this.add('-start', pokemon, 'Dynamic Shift');
+		},
+		onTryHit(target, source, move) {
+			if (!move || move.category === 'Status') return;
+			// Debuff attacker when they hit through the shield
+			if (move.category === 'Physical') {
+				this.boost({atk: -2}, source, target);
+			} else if (move.category === 'Special') {
+				this.boost({spa: -2}, source, target);
+			}
+			this.add('-anim', target, 'Reflect', target);
+		},
+		onEnd(pokemon) {
+			this.add('-end', pokemon, 'Dynamic Shift');
+		},
+	},			
 	//Shigeki
 	bleeding: {
 		name: "Bleeding",

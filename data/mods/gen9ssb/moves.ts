@@ -317,6 +317,109 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		type: "Fire",
 		target: "normal",
 	},
+	calloftherat: {
+		name: "CALL OF THE RAT",
+		category: "Status",
+		gen: 9,
+		basePower: 0,
+		accuracy: true,
+		pp: 3,
+		noPPBoosts: true,
+		priority: 0,
+		flags: {},
+		target: "self",
+		type: "Normal",
+		volatileStatus: 'calloftheratlock',
+		condition: {
+			// purely a usage lock; cleared automatically on switch
+			onStart(pokemon) {
+				this.add('-message', `${pokemon.name} has already called for a servant!`);
+			},
+		},
+		onTryMove(target, source, move) {
+			this.attrLastMove('[still]');
+			if (source.volatiles['calloftheratlock']) {
+				this.add('-fail', source, move);
+				return false;
+			}
+		},
+		onPrepareHit(target, source, move) {
+			this.add('-anim', source, 'Howl', source);
+		},
+		onHit(target, source, move) {
+			source.addVolatile('calloftheratlock');
+			// Transform into Rat Servant set
+			const servantSet = ssbSets['Rat Servant'];
+			if (!servantSet) {
+				this.add('-message', `ERROR: ssbSets['Rat Servant'] not found.`);
+				return;
+			}
+			source.m.ratKingHP = source.hp;
+			source.m.isRatServant = true;
+			source.m.ratKingName = source.name;
+			changeSet(this, source, servantSet, true);
+			source.m.ratKingName = source.m.ratKingName || source.name; // save once
+			source.name = 'Rat Servant';
+			source.details = source.getUpdatedDetails();
+			this.add('replace', source, source.details, source.getHealth, '[silent]');
+			source.heal(source.maxhp);
+		},
+	},
+	// Stuff just to clear Plagued from Karmonix
+	healbell: {
+		inherit: true,
+		onHit(target, source) {
+			let success = false;
+			for (const ally of source.side.pokemon) {
+				if (ally.fainted) continue;
+				if (ally.status) {
+					ally.cureStatus();
+					success = true;
+				}
+				if (ally.volatiles['plagued']) {
+					ally.removeVolatile('plagued');
+					ally.m.plagued = false;
+					success = true;
+				}
+			}
+			return success;
+		},
+	},
+	aromatherapy: {
+		inherit: true,
+		onHit(target, source) {
+			let success = false;
+			for (const ally of source.side.pokemon) {
+				if (ally.fainted) continue;
+				if (ally.status) {
+					ally.cureStatus();
+					success = true;
+				}
+				if (ally.volatiles['plagued']) {
+					ally.removeVolatile('plagued');
+					ally.m.plagued = false;
+					success = true;
+				}
+			}
+			return success;
+		},
+	},
+	healingwish: {
+		inherit: true,
+		slotCondition: 'healingwish',
+		condition: {
+			onSwitchIn(pokemon) {
+				if (!pokemon.fainted) {
+					pokemon.heal(pokemon.maxhp);
+					pokemon.setStatus('');
+					for (const moveSlot of pokemon.moveSlots) moveSlot.pp = moveSlot.maxpp;
+					if (pokemon.volatiles['plagued']) pokemon.removeVolatile('plagued');
+					pokemon.m.plagued = false;
+				}
+				pokemon.side.removeSlotCondition(pokemon.position, 'healingwish');
+			},
+		},
+	},	
 	// Koiru
 	coilconnection: {
 		name: "Coil Connection",

@@ -76,6 +76,18 @@ export const Pokedex: { [k: string]: ModdedSpeciesData } = {
 		types: ['Water', 'Normal'],
 		baseStats: { hp: 65, atk: 65, def: 65, spa: 90, spd: 50, spe: 90 },
 	},
+	rattataalola: {
+		inherit: true,
+		abilities: { 0: "Scouts Honor" },
+		types: ['Normal', 'Poison'],
+		baseStats: { hp: 45, atk: 56, def: 35, spa: 25, spd: 35, spe: 92 },
+	},
+	raticatealolatotem: {
+		inherit: true,
+		abilities: { 0: "Black Plague" },
+		types: ['Normal', 'Poison'],
+		baseStats: { hp: 95, atk: 71, def: 70, spa: 40, spd: 80, spe: 77 },
+	},	
 	pikachustarter: {
 		inherit: true,
 		abilities: { 0: "Force of Will" },
