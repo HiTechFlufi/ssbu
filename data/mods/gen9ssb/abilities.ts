@@ -1098,7 +1098,7 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 		flags: {},
 		onStart(pokemon) {
 			this.field.setTerrain('temporalterrain');
-		}
+		},
 	},
 	// Kusanali
 	onallthingsmeditated: {
