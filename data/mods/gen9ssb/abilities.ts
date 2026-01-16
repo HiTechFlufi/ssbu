@@ -51,8 +51,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 	vindication: {
 		name: "Vindication",
 		gen: 9,
-		shortDesc: "When hit: disables, drains PP, inflict vindictive, reduce damage once. When defeated: disable all, locks.",
-		desc: "When hit by a damaging move, disables that move, drain 4 additional PP and inflict vindictive. Reduce damage received by 75% once per switch-in. Disables all opponents moves and locks them in for 1 turn when defeated.",
+		shortDesc: "Prankster. When hit: disable, -4 PP, vindictive, reduce damage once. When defeated: disable all, lock.",
+		desc: "Status moves have +2 priority. When hit by a damaging move, disables that move, drain 4 additional PP and inflict vindictive. Reduce damage received by 75% once per switch-in. Disables all opponents moves and locks them in for 1 turn when defeated.",
 		onStart() {
 			this.effectState.damaged = false;
 		},
@@ -95,8 +95,8 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
     repentance: {
 		name: "Repentance",
 		gen: 9,
-		shortDesc: "When hit: disables and drains PP. Traps, gains priority, ignores accuracy and 1.5x damage vs vindictive mons. Enemy loses vindictive when hit.",
-		desc: "When hit by an attack, disables that move and drains 4 additional PP. When faced with an opponent inflicted with 'Vindictive': traps that opponent, all moves gain +2 priority, bypasses accuracy checks. When damaging an opponent with 'Vindictive', deals 1.5x extra damage and removes 'Vindictive'.",
+		shortDesc: "Prankster. When hit: disable and -4 PP. Trap, +2 priority, ignore accuracy and 1.5x damage vs vindictive mons. Enemy loses vindictive when hit.",
+		desc: "Status moves have +2 priority. When hit by an attack, disables that move and drains 4 additional PP. When faced with an opponent inflicted with 'Vindictive': traps that opponent, all moves gain +2 priority, bypasses accuracy checks. When damaging an opponent with 'Vindictive', deals 1.5x extra damage and removes 'Vindictive'.",
 		onDamagingHit(damage, target, source, move) {
 			//copy-pasted from above code that disables move and drains pp
 			if (move.isZ && move.basemove) move = this.dex.moves.get(move.baseMove);
