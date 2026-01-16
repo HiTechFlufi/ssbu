@@ -209,109 +209,52 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 			},
 		},
 	},
-	calloftherat: {
-		name: "CALL OF THE RAT",
-		category: "Status",
+	// Karumonix
+	vermincrown: {
+		name: "Vermin Crown",
 		gen: 9,
-		basePower: 0,
-		accuracy: true,
-		pp: 3,
-		noPPBoosts: true,
-		priority: 0,
-		flags: {},
-		target: "self",
-		type: "Normal",
-		volatileStatus: 'calloftheratlock',
-		condition: {
-			// purely a usage lock; cleared automatically on switch
-			onStart(pokemon) {
-				this.add('-message', `${pokemon.name} has already called for a servant!`);
-			},
+		shortDesc: "Immune to Ratfested/Plagued. If KO'd with item intact: foe gets 1 Ratfested. Contacting holder doubles Ratfested damage.",
+		desc: "The holder is immune to Ratfested and Plagued. If the holder faints while still holding this item, the opposing Pokemon gains 1 Ratfested stack. If an opposing Pokemon makes contact with the holder, that opponent's Ratfested/Plagued damage is doubled for a short time.",
+		onStart(pokemon) {
+			if (pokemon.volatiles['plagued']) pokemon.removeVolatile('plagued');
+			if (pokemon.volatiles['ratfested']) pokemon.removeVolatile('ratfested');
 		},
-		onTryMove(target, source, move) {
-			this.attrLastMove('[still]');
-			if (source.volatiles['calloftheratlock']) {
-				this.add('-fail', source, move);
-				return false;
+		// Immune to Ratfested + Plagued being applied
+		onTryAddVolatile(status, target, source, effect) {
+			if (status.id === 'ratfested' || status.id === 'plagued') {
+				this.add('-immune', target, '[from] item: Vermin Crown');
+				return null;
 			}
 		},
-		onPrepareHit(target, source, move) {
-			this.add('-anim', source, 'Howl', source);
+		// Implemented as: if foe uses a contact move INTO holder, mark them for doubled plague ticks.
+		onDamagingHit(damage, target, source, move) {
+			if (!source || source.fainted) return;
+			if (source.side === target.side) return;
+			if (!move?.flags?.contact) return;
+			source.addVolatile('vermincrownmark', target, this.dex.items.get('vermincrown'));
 		},
-		onHit(target, source, move) {
-			source.addVolatile('calloftheratlock');
-			// Transform into Rat Servant set
-			const servantSet = ssbSets['Rat Servant'];
-			if (!servantSet) {
-				this.add('-message', `ERROR: ssbSets['Rat Servant'] not found.`);
+		onModifyMove(move, pokemon) {
+			if (move.id === 'populationbomb') {
+				move.accuracy = true;
+			}
+		},
+		onFaint(pokemon) {
+			// Only trigger if item is still actually held/active
+			if (pokemon.ignoringItem()) return;
+			if (pokemon.item !== 'vermincrown') return;
+			const last = pokemon.lastAttackedBy;
+			const attacker = last?.source;
+			if (attacker && !attacker.fainted && attacker.side !== pokemon.side) {
+				for (let i = 0; i < 3; i++) attacker.addVolatile('ratfested', pokemon, this.dex.items.get('vermincrown'));
 				return;
 			}
-			source.m.ratKingHP = source.hp;
-			source.m.isRatServant = true;
-			source.m.ratKingName = source.name;
-			changeSet(this, source, servantSet, true);
-			source.m.ratKingName = source.m.ratKingName || source.name; // save once
-			source.name = 'Rat Servant';
-			source.details = source.getUpdatedDetails();
-			this.add('replace', source, source.details, source.getHealth, '[silent]');
-			source.heal(source.maxhp);
-		},
-	},
-	// Stuff just to clear Plagued from Karmonix
-	healbell: {
-		inherit: true,
-		onHit(target, source) {
-			let success = false;
-			for (const ally of source.side.pokemon) {
-				if (ally.fainted) continue;
-				if (ally.status) {
-					ally.cureStatus();
-					success = true;
-				}
-				if (ally.volatiles['plagued']) {
-					ally.removeVolatile('plagued');
-					ally.m.plagued = false;
-					success = true;
-				}
+			// Fallback: if no clear attacker (hazards/status), tag all opposing actives
+			for (const foe of pokemon.side.foe.active) {
+				if (!foe || foe.fainted) continue;
+				for (let i = 0; i < 3; i++) foe.addVolatile('ratfested', pokemon, this.dex.items.get('vermincrown'));
 			}
-			return success;
 		},
 	},
-	aromatherapy: {
-		inherit: true,
-		onHit(target, source) {
-			let success = false;
-			for (const ally of source.side.pokemon) {
-				if (ally.fainted) continue;
-				if (ally.status) {
-					ally.cureStatus();
-					success = true;
-				}
-				if (ally.volatiles['plagued']) {
-					ally.removeVolatile('plagued');
-					ally.m.plagued = false;
-					success = true;
-				}
-			}
-			return success;
-		},
-	},
-	healingwish: {
-		inherit: true,
-		slotCondition: 'healingwish',
-		condition: {
-			onSwitchIn(pokemon) {
-				if (!pokemon.fainted) {
-					pokemon.heal(pokemon.maxhp);
-					pokemon.setStatus('');
-					for (const moveSlot of pokemon.moveSlots) moveSlot.pp = moveSlot.maxpp;
-					if (pokemon.volatiles['plagued']) pokemon.removeVolatile('plagued');
-					pokemon.m.plagued = false;
-				}
-				pokemon.side.removeSlotCondition(pokemon.position, 'healingwish');
-			},
-		},
-	},	
 	// Koiru
 	fusioncoils: {
 		name: "Fusion Coils",
