@@ -21,23 +21,16 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 				this.add('-message', `${source.name} was set aflame by its Heart of Darkness!`);
 			}
 		},
-	onAnyAfterMove(source, target, move) {
-		const holder = this.effectState.target;
-		if (!holder || holder.fainted) return;
-
-		if (source === holder) return;
-
-		if (
-			move &&
-			move.category === 'Status' &&
-			move.heal
-		) {
-			const [num, den] = move.heal;
-			const healAmount = Math.floor(holder.baseMaxhp * num / den);
-
-		if (healAmount > 0) {
-			this.heal(healAmount, holder);
-			this.add('-message', `${holder.name} copied their opponent's healing!`);
+		onAnyAfterMove(source, target, move) {
+			const holder = this.effectState.target;
+			if (!holder || holder.fainted) return;
+			if (source === holder) return;
+			if (move && move.category === 'Status' && move.heal) {
+				const [num, den] = move.heal;
+				const healAmount = Math.floor(holder.baseMaxhp * num / den);
+				if (healAmount > 0) {
+					this.heal(healAmount, holder);
+					this.add('-message', `${holder.name} copied their opponent's healing!`);
 				}
 			}
 		},
