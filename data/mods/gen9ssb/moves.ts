@@ -383,11 +383,13 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			source.m.ratKingHP = source.hp;
 			source.m.isRatServant = true;
 			source.m.ratKingName = source.name;
+			source.m.ratKingPP = source.moveSlots.map(ms => ({id: ms.id, pp: ms.pp}));
 			changeSet(this, source, servantSet, true);
 			source.m.ratKingName = source.m.ratKingName || source.name; // save once
 			source.name = 'Rat Servant';
 			source.details = source.getUpdatedDetails();
 			this.add('replace', source, source.details, source.getHealth, '[silent]');
+			for (const ms of source.moveSlots) ms.pp = ms.maxpp;
 			source.heal(source.maxhp);
 		},
 	},
