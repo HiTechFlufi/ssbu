@@ -6316,6 +6316,11 @@ export const MovesText: { [id: IDEntry]: MoveText } = {
 		end: "  The pointed stones disappeared from around [TEAM]!",
 		damage: "  Pointed stones dug into [POKEMON]!",
 	},
+	pinkrocks: {
+		name: "Pink Rocks",
+		start: "  Strange pink rocks cover the battlefield around [TEAM]!",
+		end: "  The strange rocks melted away!",
+	},
 	steameruption: {
 		name: "Steam Eruption",
 		desc: "Has a 30% chance to burn the target. The target thaws out if it is frozen.",

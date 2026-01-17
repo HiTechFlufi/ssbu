@@ -53,7 +53,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		sideCondition: 'pinkrocks',
 		condition: {
 			onSideStart(side) {
-				this.add('-message', `Strange pink rocks covered the battlefield!`);
+				this.add('-sidestart', side, 'move: Pink Rocks');
 			},
 			onBeforeMove(attacker, defender, move) {
 				if (!move || move.category === 'Status') return;
@@ -74,9 +74,6 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 				this.actions.useMove(randomMove, attacker);
 				attacker.side.removeSideCondition('pinkrocks');
 				return false;
-			},
-			onSideEnd(side) {
-				this.add('-message', `The strange rocks melted away!`);
 			},
 		},
 		secondary: null,
