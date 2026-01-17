@@ -3980,7 +3980,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		target: "normal",
 		type: "Fire",
 	},
-	// Yukari Yakumo
+	// Yukari Yakumo Backend
 	ranyakumo: {
 		accuracy: true,
 		basePower: 40,
@@ -4013,10 +4013,10 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		},
 		onHit(target, source, move) {
 			for (const foe of target.side.pokemon) {
-				if (foe.m.ran) foe.m.ran = false;
+				if (foe.ran) foe.ran = false;
 			}
 			target.addVolatile('shikigamiran');
-			target.m.ran = true;
+			target.ran = true;
 		},
 		condition: {
 			onResidual(pokemon) {

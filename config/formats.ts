@@ -3181,14 +3181,6 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				}
 			}
 			for (const pokemon of this.getAllActive()) {
-				if (pokemon.species.id === 'mimikyubusted') {
-					if (!pokemon.abilityState.dollDur || pokemon.abilityState.dollDur <= 0) {
-						pokemon.formeChange('Mimikyu');
-						pokemon.abilityState.dollDur = 0;
-					} else if (pokemon.abilityState.dollDur) {
-						pokemon.abilityState.dollDur--;
-					}
-				}
 				// Triple Threat: ACTIVE ONLY grade tick + S-grade forced switch + tether setup
 				if (pokemon.getAbility().id === 'triplethreat') {
 					if (pokemon.fainted) continue;
@@ -3228,7 +3220,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 		onSwitchIn(pokemon) {
 			const target = pokemon.side.foe.active[pokemon.side.foe.active.length - 1 - pokemon.position];
 			const ability = target.getAbility();
-			if (pokemon.abilityState.ran) pokemon.addVolatile('shikigamiran');
+			if (pokemon.ran) pokemon.addVolatile('shikigamiran');
 			if (pokemon.m.vindictive) pokemon.addVolatile('vindictive'); //hooked doll thingy
 			const s = pokemon.m.ratfestedStacks || 0;
 			const p = !!pokemon.m.plagued;

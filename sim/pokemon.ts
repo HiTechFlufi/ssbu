@@ -157,6 +157,12 @@ export class Pokemon {
 	apparentType: string;
 
 	/**
+	 * Custom values
+	 */
+
+	ran: boolean = false;
+
+	/**
 	 * If the switch is called by an effect with a special switch
 	 * message, like U-turn or Baton Pass, this will be the ID of
 	 * the calling effect.
