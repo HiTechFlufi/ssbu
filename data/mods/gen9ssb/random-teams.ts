@@ -259,10 +259,10 @@ export const ssbSets: SSBSets = {
 		evs: { hp: 120, atk: 136, spe: 252 }, ivs: { spa: 0 }, nature: 'Jolly',
 	},
 	'The Stuff': {
-		species: 'Hypno', ability: 'Run Away', item: 'Pocketful of Posies', gender: 'F',
-		moves: ['Charm', 'Pound', 'Harden'],
+		species: 'Hypno', ability: 'Ultranumb', item: 'Pocketful of Posies', gender: 'F',
+		moves: ['Spirit Break', 'Obstruct', 'Lovely Kiss'],
 		signatureMove: 'Pink Rocks',
-		evs: {}, nature: 'Calm',
+		evs: { hp: 248, atk: 8, def: 252 }, nature: 'Impish', shiny: true,
 	},
 	Toshiro: {
 		species: 'Sandslash-Alola', ability: 'Daiguren Hyorinmaru', item: 'Never-Melt Ice', gender: 'M',

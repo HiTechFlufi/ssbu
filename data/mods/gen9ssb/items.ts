@@ -3,7 +3,8 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 	pocketfulofposies: {
 		name: "Pocketful of Posies",
 		gen: 9,
-		shortDesc: "On switch-in, creates Pink Rocks on foe side.",
+		shortDesc: "Sets Pink Rocks on opposing sides.",
+		desc: "Upon switching in or receiving this item, sets Pink Rocks on all opposing sides, transforming the opponent's next attacking move into another attacking move of the same type.",
 		onStart(pokemon) {
 			this.actions.useMove('Pink Rocks', pokemon);
 		},

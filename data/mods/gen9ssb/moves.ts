@@ -47,18 +47,36 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		basePower: 0,
 		category: "Status",
 		name: "Pink Rocks",
-		pp: 20,
+		pp: 5,
 		priority: 0,
 		flags: { reflectable: 1, metronome: 1, mustpressure: 1 },
 		sideCondition: 'pinkrocks',
 		condition: {
 			onSideStart(side) {
-				this.add('-sidestart', side, 'move: Pink Rocks');
+				this.add('-message', `Strange pink rocks covered the battlefield!`);
 			},
-			onSwitchIn(pokemon) {
-				if (pokemon.hasItem('heavydutyboots')) return;
-				const typeMod = this.clampIntRange(pokemon.runEffectiveness(this.dex.getActiveMove('pinkrocks')), -6, 6);
-				this.damage(pokemon.maxhp * (2 ** typeMod) / 8);
+			onBeforeMove(attacker, defender, move) {
+				if (!move || move.category === 'Status') return;
+				const moves = this.dex.moves.all().filter(move => (
+					(![2, 4].includes(this.gen) || !attacker.moves.includes(move.id)) &&
+					(!move.isNonstandard || move.isNonstandard === 'Unobtainable') &&
+					move.flags['metronome'] // If a move was banned from being rolled via metronome, we probably don't want to roll it here, either
+				));
+				let randomMove = '';
+				let moveName = '';
+				if (moves.length) {
+					moves.sort((a, b) => a.num - b.num);
+					randomMove = this.sample(moves).id;
+					moveName = this.dex.moves.get(randomMove).name;
+				}
+				if (!randomMove) return;
+				this.add('-message', `${attacker.name} refused to use ${move.name}!`);
+				this.actions.useMove(randomMove, attacker);
+				attacker.side.removeSideCondition('pinkrocks');
+				return false;
+			},
+			onSideEnd(side) {
+				this.add('-message', `The strange rocks melted away!`);
 			},
 		},
 		secondary: null,

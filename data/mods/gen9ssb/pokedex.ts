@@ -6,6 +6,11 @@ export const Pokedex: { [k: string]: ModdedSpeciesData } = {
 		baseStats: {hp: 100, atk: 100, def: 100, spa: 100, spd: 100, spe: 100}, // the base stats for the pokemon
 	},
 	*/
+	hypno: {
+		inherit: true,
+		types: ['Fairy'],
+		abilities: { 0: "Ultranumb" },
+	},
 	giratinaorigin: {
 		inherit: true,
 		types: ['Ghost', 'Fighting'],		
@@ -17,7 +22,7 @@ export const Pokedex: { [k: string]: ModdedSpeciesData } = {
 	},
 	banettemega: {
 		inherit: true,
-		ability: { 0: "Repentance" },
+		abilities: { 0: "Repentance" },
 	},
 	delibird: {
 		inherit: true,
