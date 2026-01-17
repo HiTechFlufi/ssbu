@@ -1,6 +1,32 @@
 // List of flags and their descriptions can be found in sim/dex-moves.ts
 
 export const Moves: import('../sim/dex-moves').MoveDataTable = {
+	// The Stuff
+	pinkrocks: {
+		accuracy: true,
+		basePower: 0,
+		category: "Status",
+		name: "Pink Rocks",
+		pp: 20,
+		priority: 0,
+		flags: { reflectable: 1, metronome: 1, mustpressure: 1 },
+		sideCondition: 'pinkrocks',
+		condition: {
+			onSideStart(side) {
+				this.add('-sidestart', side, 'move: Pink Rocks');
+			},
+			onSwitchIn(pokemon) {
+				if (pokemon.hasItem('heavydutyboots')) return;
+				const typeMod = this.clampIntRange(pokemon.runEffectiveness(this.dex.getActiveMove('pinkrocks')), -6, 6);
+				this.damage(pokemon.maxhp * (2 ** typeMod) / 8);
+			},
+		},
+		secondary: null,
+		target: "foeSide",
+		type: "Fairy",
+		zMove: { boost: { spa: 1 } },
+		contestType: "Clever",
+	},
 	"10000000voltthunderbolt": {
 		num: 719,
 		accuracy: true,

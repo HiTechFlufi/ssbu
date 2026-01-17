@@ -4,11 +4,13 @@ export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 		name: "Pocketful of Posies",
 		gen: 9,
 		shortDesc: "On switch-in, creates Pink Rocks on foe side.",
+		/*
 		onStart(pokemon) {
 			for (const side of pokemon.side.foeSidesWithConditions()) {
 				side.addSideCondition('pinkrocks');
 			}
 		},
+		*/
 	},
 	// Mel
 	heartofdarkness: {
