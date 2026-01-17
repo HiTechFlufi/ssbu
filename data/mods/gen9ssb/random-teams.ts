@@ -90,12 +90,6 @@ export const ssbSets: SSBSets = {
 		signatureMove: 'Coin Clash',
 		evs: { hp: 252, atk: 252, def: 252, spa: 252, spd: 252, spe: 252 }, nature: 'Jolly',
 	},
-	'Mink the Putrid': {
-		species: 'Venusaur-Mega', ability: 'Wicked Stench', item: 'Corpse Lily', gender: 'M',
-		moves: ['Giga Drain', 'Gunk Shot', 'Earthquake'],
-		signatureMove: 'Transfuse Toxin',
-		evs: { hp: 248, atk: 8, def: 252 }, nature: 'Relaxed',
-	},
 	'Hooked Doll': {
 		species: 'banette', ability: 'Vindication', item: 'Banettite', Gender: 'F',
 		moves: ['Throat Chop', 'Gunk Shot', 'Spite'],
