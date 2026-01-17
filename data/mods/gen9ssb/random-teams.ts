@@ -49,7 +49,7 @@ export const ssbSets: SSBSets = {
 		evs: { hp: 4, spa: 252, spe: 252 }, nature: 'Timid',
 	},
 	'Cyclommatic Cell': {
-		species: 'Vikavolt', ability: 'Battery Life', item: 'Apparatus', gender: 'N',
+		species: 'Vikavolt-Totem', ability: 'Battery Life', item: 'Apparatus', gender: 'N',
 		moves: ['Parabolic Charge', 'Energy Ball', 'Techno Blast'],
 		signatureMove: 'Parabolic Discharge',
 		evs: { hp: 252, spa: 252, spd: 4 }, ivs: { spe: 29 }, nature: 'Modest',

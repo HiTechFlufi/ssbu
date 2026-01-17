@@ -142,9 +142,9 @@ export const Pokedex: { [k: string]: ModdedSpeciesData } = {
 		inherit: true,
 		abilities: { 0: "Now, Until You Die" },
 	},
-	vikavolt: {
+	vikavolttotem: {
 		inherit: true,
-		types: ['Electric', 'Steel'],
+		types: ['Electric'],
 		abilities: { 0: "Battery Life" },
 	},
 	zeraora: {
