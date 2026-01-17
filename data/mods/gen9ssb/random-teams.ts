@@ -263,7 +263,7 @@ export const ssbSets: SSBSets = {
 	'The Stuff': {
 		species: 'Hypno', ability: 'Run Away', item: 'Pocketful of Posies', gender: 'F',
 		moves: ['Charm', 'Pound', 'Harden'],
-		signatureMove: 'Splash',
+		signatureMove: 'Pink Rocks',
 		evs: {}, nature: 'Calm',
 	},
 	Toshiro: {
