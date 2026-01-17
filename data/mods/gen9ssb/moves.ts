@@ -49,18 +49,24 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		name: "Pink Rocks",
 		pp: 5,
 		priority: 0,
+		shortDesc: "Foe's next attack is randomized to another move of same type.",
+		desc: "The next attacking move that's used by a Pokemon on the opposing side is transformed into another move of the same type as the original move, chosen randomly. Pink Rocks will only transform moves into moves that can be rolled through Metronome.",
 		flags: { reflectable: 1, metronome: 1, mustpressure: 1 },
 		sideCondition: 'pinkrocks',
+		onTryMove(target, source, move) {
+			this.attrLastMove('[still]');
+			this.add ('-anim', source, 'Tickle', target);
+		},
 		condition: {
 			onSideStart(side) {
 				this.add('-sidestart', side, 'move: Pink Rocks');
 			},
 			onBeforeMove(attacker, defender, move) {
 				if (!move || move.category === 'Status') return;
-				const moves = this.dex.moves.all().filter(move => (
-					(![2, 4].includes(this.gen) || !attacker.moves.includes(move.id)) &&
-					(!move.isNonstandard || move.isNonstandard === 'Unobtainable') &&
-					move.flags['metronome'] // If a move was banned from being rolled via metronome, we probably don't want to roll it here, either
+				const moves = this.dex.moves.all().filter(mv => (
+					(![2, 4].includes(this.gen) || !attacker.moves.includes(mv.id)) &&
+					(!mv.isNonstandard || mv.isNonstandard === 'Unobtainable') &&
+					mv.flags['metronome'] && mv.type == move.type
 				));
 				let randomMove = '';
 				let moveName = '';
