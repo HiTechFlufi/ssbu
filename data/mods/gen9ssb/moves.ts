@@ -383,11 +383,13 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 			source.m.ratKingHP = source.hp;
 			source.m.isRatServant = true;
 			source.m.ratKingName = source.name;
+			source.m.ratKingPP = source.moveSlots.map(ms => ({id: ms.id, pp: ms.pp}));
 			changeSet(this, source, servantSet, true);
 			source.m.ratKingName = source.m.ratKingName || source.name; // save once
 			source.name = 'Rat Servant';
 			source.details = source.getUpdatedDetails();
 			this.add('replace', source, source.details, source.getHealth, '[silent]');
+			for (const ms of source.moveSlots) ms.pp = ms.maxpp;
 			source.heal(source.maxhp);
 		},
 	},
@@ -3247,7 +3249,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		basePower: 0,
 		category: "Status",
 		name: "Weapon Enhancement",
-		pp: 3,
+		pp: 4,
 		noPPBoosts: true,
 		priority: 0,
 		flags: { snatch: 1 },
@@ -3854,7 +3856,7 @@ export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 		shortDesc: "Heal 1/3 damage and lower Defense by 1 stage but can't use twice in a row.",
 		name: "Burst Delta",
 		gen: 9,
-		pp: 5,
+		pp: 8,
 		noPPBoosts: true,
 		priority: 1,
 		flags: { mirror: 1, protect: 1, cantusetwice: 1 },

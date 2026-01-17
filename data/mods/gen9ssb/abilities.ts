@@ -252,12 +252,20 @@ export const Abilities: import('../../../sim/dex-abilities').ModdedAbilityDataTa
 			}
 			pokemon.m.isRatServant = false;
 			changeSet(this, pokemon, kingSet, true);
-			const saved = pokemon.m.ratKingHP;
-			if (saved && typeof saved === 'number') {
-				pokemon.hp = Math.min(pokemon.maxhp, Math.max(1, saved));
+			const savedHP = pokemon.m.ratKingHP;
+			if (savedHP && typeof savedHP === 'number') {
+				pokemon.hp = Math.min(pokemon.maxhp, Math.max(1, savedHP));
 			pokemon.name = pokemon.m.ratKingName || pokemon.name;
 			pokemon.details = pokemon.getUpdatedDetails();
 			this.add('replace', pokemon, pokemon.details, pokemon.getHealth, '[silent]');
+			const savedPP = pokemon.m.ratKingPP as Array<{id: string, pp: number}> | undefined;
+			if (savedPP) {
+				for (const ms of pokemon.moveSlots) {
+					const found = savedPP.find(x => x.id === ms.id);
+					if (found) ms.pp = Math.min(ms.maxpp, Math.max(0, found.pp));
+				}
+			}
+			pokemon.m.ratKingPP = null;	
 			}
 			pokemon.m.ratKingHP = 0;
 			this.add('-message', `${pokemon.name} returns to the Rat King!`);
